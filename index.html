@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Torah Nav">
+<title>Torah Scroll Navigator</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+:root {
+  --gold: #b8860b; --gold-l: #d4a017;
+  --parch: #f5e6c8; --parch-d: #e8d5a8;
+  --ink: #1a0a00; --bg-dark: #1a0e00;
+  --bg-card: rgba(61,34,0,0.92);
+}
+html, body { height: 100%; overflow: hidden; }
+body { font-family: Georgia,'Times New Roman',serif; background: var(--bg-dark); color: var(--parch); max-width: 480px; margin: 0 auto; }
+
+/* SCREENS */
+.screen { display: none; flex-direction: column; height: 100vh; overflow-y: auto; }
+.screen.active { display: flex; }
+
+/* KEY SCREEN */
+#keyScreen { align-items: center; justify-content: center; padding: 32px 24px; gap: 20px; background: radial-gradient(ellipse at top,#2d1a00,#1a0e00); }
+.key-logo .he { font-size: 38px; font-weight: bold; color: var(--gold-l); letter-spacing: 4px; direction: rtl; text-shadow: 0 2px 12px rgba(212,160,23,.5); text-align:center; }
+.key-logo .en { font-size: 11px; color: var(--parch-d); letter-spacing: 3px; text-transform: uppercase; text-align:center; margin-top:4px; }
+.key-scroll { font-size: 60px; text-align:center; }
+.key-card { width:100%; background: var(--bg-card); border:1px solid rgba(184,134,11,.3); border-radius:16px; padding:20px; display:flex; flex-direction:column; gap:14px; }
+.key-card h2 { font-size:15px; color:var(--gold-l); font-weight:normal; letter-spacing:1px; }
+.key-card p { font-size:12px; color:var(--parch-d); line-height:1.7; }
+.key-card a { color:var(--gold-l); }
+.key-input-wrap { position:relative; }
+#apiKeyInput { width:100%; padding:12px 44px 12px 12px; background:#0d0600; color:var(--parch); border:1px solid rgba(184,134,11,.5); border-radius:8px; font-size:14px; font-family:monospace; outline:none; }
+#apiKeyInput::placeholder { color:#555; }
+#toggleVis { position:absolute; right:10px; top:50%; transform:translateY(-50%); background:none; border:none; color:var(--gold); font-size:18px; cursor:pointer; padding:4px; }
+.key-error { font-size:12px; color:#fca5a5; display:none; }
+.btn-gold { background:linear-gradient(135deg,var(--gold),var(--gold-l)); color:var(--ink); border:none; border-radius:10px; padding:14px; font-size:16px; font-weight:bold; font-family:Georgia,serif; cursor:pointer; width:100%; }
+.btn-gold:active { opacity:.8; }
+
+/* APP SCREEN */
+#appScreen { background: radial-gradient(ellipse at top,#2d1a00,#1a0e00); overflow:hidden; }
+.app-header { background:linear-gradient(180deg,#3d2200,#2a1500); border-bottom:2px solid var(--gold); padding:10px 14px; display:flex; align-items:center; justify-content:space-between; flex-shrink:0; }
+.app-header .he { font-size:20px; font-weight:bold; color:var(--gold-l); letter-spacing:3px; direction:rtl; }
+.app-header .en { font-size:9px; color:var(--parch-d); letter-spacing:2px; text-transform:uppercase; }
+.btn-gear { background:none; border:1px solid rgba(184,134,11,.3); border-radius:8px; color:var(--gold); font-size:18px; padding:6px 10px; cursor:pointer; }
+
+.target-bar { background:var(--bg-card); border-bottom:1px solid rgba(184,134,11,.2); padding:10px 12px; flex-shrink:0; }
+.selectors { display:flex; gap:6px; margin-bottom:8px; }
+.sg { display:flex; flex-direction:column; flex:1; min-width:0; }
+.sl { font-size:9px; color:var(--parch-d); margin-bottom:3px; text-transform:uppercase; letter-spacing:1px; }
+select { background:#0d0600; color:var(--parch); border:1px solid rgba(184,134,11,.5); border-radius:6px; padding:5px 3px; font-size:12px; font-family:Georgia,serif; outline:none; width:100%; }
+.tdisp { display:flex; align-items:baseline; gap:8px; }
+#tRef { font-size:17px; font-weight:bold; color:var(--gold-l); }
+#tRefEn { font-size:11px; color:var(--parch-d); }
+
+.vf-wrap { flex:1; position:relative; overflow:hidden; background:#000; }
+#video { width:100%; height:100%; object-fit:cover; display:block; }
+#snapCanvas { display:none; }
+
+#noCam { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:14px; background:#0d0600; }
+#noCam .icon { font-size:52px; }
+#noCam p { font-size:13px; color:var(--parch-d); text-align:center; padding:0 30px; line-height:1.6; }
+#btnStartCam { background:linear-gradient(135deg,var(--gold),var(--gold-l)); color:var(--ink); border:none; border-radius:10px; padding:13px 28px; font-size:15px; font-weight:bold; font-family:Georgia,serif; cursor:pointer; }
+
+#camOverlay { position:absolute; inset:0; display:flex; flex-direction:column; justify-content:space-between; padding:10px; pointer-events:none; }
+.br { position:absolute; width:24px; height:24px; }
+.tl { top:10px; left:10px; border-top:2px solid var(--gold); border-left:2px solid var(--gold); border-radius:4px 0 0 0; }
+.tr { top:10px; right:10px; border-top:2px solid var(--gold); border-right:2px solid var(--gold); border-radius:0 4px 0 0; }
+.bl { bottom:60px; left:10px; border-bottom:2px solid var(--gold); border-left:2px solid var(--gold); border-radius:0 0 0 4px; }
+.br2 { bottom:60px; right:10px; border-bottom:2px solid var(--gold); border-right:2px solid var(--gold); border-radius:0 0 4px 0; }
+
+#scanBadge { align-self:center; background:rgba(0,0,0,.82); border:1px solid var(--gold); border-radius:20px; padding:6px 16px; font-size:13px; color:var(--gold-l); display:none; align-items:center; gap:8px; backdrop-filter:blur(4px); }
+#scanBadge.on { display:flex; }
+.pdot { width:8px; height:8px; border-radius:50%; background:var(--gold-l); animation:pulse 1s ease-in-out infinite; }
+@keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.3;transform:scale(.6)} }
+
+#navResult { display:flex; flex-direction:column; gap:6px; opacity:0; transition:opacity .3s; }
+#navResult.on { opacity:1; }
+.loc-box { background:rgba(0,0,0,.82); backdrop-filter:blur(6px); border:1px solid rgba(184,134,11,.4); border-radius:10px; padding:8px 12px; }
+.loc-lbl { font-size:9px; color:var(--parch-d); text-transform:uppercase; letter-spacing:1px; }
+.loc-ref { font-size:20px; font-weight:bold; color:var(--parch); margin:2px 0; }
+.loc-conf { font-size:10px; text-transform:uppercase; letter-spacing:1px; }
+.ch { color:#86efac; } .cm { color:#fde68a; } .cl { color:#fca5a5; }
+.dir-box { background:rgba(0,0,0,.88); backdrop-filter:blur(6px); border:2px solid var(--gold-l); border-radius:10px; padding:10px 14px; display:flex; align-items:center; gap:12px; }
+.darr { font-size:42px; color:var(--gold-l); line-height:1; flex-shrink:0; }
+.dlbl { font-size:18px; font-weight:bold; color:var(--gold-l); }
+.ddst { font-size:12px; color:var(--parch); margin-top:2px; }
+.dpct { font-size:10px; color:var(--parch-d); margin-top:1px; }
+.at-tgt { background:rgba(0,100,0,.85); backdrop-filter:blur(6px); border:2px solid #4ade80; border-radius:10px; padding:12px; text-align:center; font-size:17px; font-weight:bold; color:#bbf7d0; }
+.no-txt { align-self:center; background:rgba(100,0,0,.85); border:1px solid #ef4444; border-radius:20px; padding:6px 16px; font-size:12px; color:#fca5a5; }
+.loc-note { background:rgba(0,0,0,.65); border-radius:8px; padding:6px 10px; font-size:11px; color:var(--parch-d); font-style:italic; }
+
+.scan-bar { position:absolute; bottom:0; left:0; right:0; padding:10px 12px; display:flex; gap:8px; align-items:center; background:linear-gradient(transparent,rgba(0,0,0,.7)); pointer-events:all; }
+#btnScan { flex:1; background:linear-gradient(135deg,var(--gold),var(--gold-l)); color:var(--ink); border:none; border-radius:10px; padding:13px; font-size:15px; font-weight:bold; font-family:Georgia,serif; cursor:pointer; }
+#btnScan:disabled { opacity:.5; }
+#btnAuto { background:rgba(0,0,0,.6); color:var(--parch-d); border:1px solid rgba(184,134,11,.4); border-radius:10px; padding:13px 12px; font-size:12px; font-family:Georgia,serif; cursor:pointer; white-space:nowrap; }
+#btnAuto.on { background:rgba(184,134,11,.25); color:var(--gold-l); border-color:var(--gold); }
+
+/* SETTINGS SCREEN */
+#settingsScreen { background:radial-gradient(ellipse at top,#2d1a00,#1a0e00); }
+.s-header { background:linear-gradient(180deg,#3d2200,#2a1500); border-bottom:2px solid var(--gold); padding:14px 16px; display:flex; align-items:center; gap:12px; flex-shrink:0; }
+.btn-back { background:none; border:none; color:var(--gold-l); font-size:24px; cursor:pointer; padding:0 4px; line-height:1; }
+.s-header h2 { font-size:16px; color:var(--parch); font-weight:normal; letter-spacing:1px; }
+.s-body { padding:16px; display:flex; flex-direction:column; gap:14px; flex:1; }
+.s-card { background:var(--bg-card); border:1px solid rgba(184,134,11,.25); border-radius:12px; padding:16px; display:flex; flex-direction:column; gap:10px; }
+.s-card h3 { font-size:11px; color:var(--gold); text-transform:uppercase; letter-spacing:2px; font-weight:normal; }
+.s-card p { font-size:12px; color:var(--parch-d); line-height:1.7; }
+.s-card a { color:var(--gold-l); }
+.key-disp { background:#0d0600; border:1px solid rgba(184,134,11,.4); border-radius:8px; padding:10px 12px; font-size:13px; font-family:monospace; color:var(--parch-d); word-break:break-all; }
+.btn-danger { background:rgba(139,26,26,.4); color:#fca5a5; border:1px solid #8b1a1a; border-radius:8px; padding:10px; font-size:13px; font-family:Georgia,serif; cursor:pointer; width:100%; }
+.ivl-row { display:flex; align-items:center; gap:10px; }
+.ivl-row label { font-size:13px; color:var(--parch-d); flex:1; }
+#ivlSel { background:#0d0600; color:var(--parch); border:1px solid rgba(184,134,11,.5); border-radius:6px; padding:6px 8px; font-size:13px; font-family:Georgia,serif; outline:none; }
+.howto ol { font-size:12px; color:var(--parch-d); padding-left:18px; line-height:2.1; }
+.scroll-note { font-size:11px; color:rgba(232,213,168,.6); border-top:1px solid rgba(184,134,11,.15); padding-top:10px; margin-top:8px; line-height:1.7; }
+</style>
+</head>
+<body>
+
+<!-- ── API KEY SCREEN ── -->
+<div id="keyScreen" class="screen active">
+  <div class="key-logo">
+    <div class="he">מגלת תורה</div>
+    <div class="en">Torah Scroll Navigator</div>
+  </div>
+  <div class="key-scroll">📜</div>
+  <div class="key-card">
+    <h2>One-time setup</h2>
+    <p>This app uses Claude AI to read Hebrew text from your live camera. You'll need an Anthropic API key — each scan costs a fraction of a cent.</p>
+    <p>Get yours free at <a href="https://console.anthropic.com" target="_blank">console.anthropic.com</a> → API Keys. Your key is stored only on this device.</p>
+    <div class="key-input-wrap">
+      <input type="password" id="apiKeyInput" placeholder="sk-ant-api03-…" autocomplete="off" autocorrect="off" spellcheck="false" />
+      <button id="toggleVis" onclick="toggleVis()">👁</button>
+    </div>
+    <div class="key-error" id="keyErr">Please enter a valid key (starts with sk-ant-)</div>
+    <button class="btn-gold" onclick="saveKey()">Save &amp; Open Camera →</button>
+  </div>
+</div>
+
+<!-- ── MAIN APP SCREEN ── -->
+<div id="appScreen" class="screen">
+  <div class="app-header">
+    <div>
+      <div class="he">מגלת תורה</div>
+      <div class="en">Torah Scroll Navigator</div>
+    </div>
+    <button class="btn-gear" onclick="showScreen('settingsScreen')">⚙️</button>
+  </div>
+
+  <div class="target-bar">
+    <div class="selectors">
+      <div class="sg"><div class="sl">Book</div><select id="selBook" onchange="onBook()"></select></div>
+      <div class="sg"><div class="sl">Chapter</div><select id="selCh" onchange="onCh()"></select></div>
+      <div class="sg"><div class="sl">Verse</div><select id="selV" onchange="onV()"></select></div>
+    </div>
+    <div class="tdisp"><span id="tRef">Bereshit 1:1</span><span id="tRefEn">Genesis 1:1</span></div>
+  </div>
+
+  <div class="vf-wrap">
+    <video id="video" playsinline muted autoplay></video>
+    <canvas id="snapCanvas"></canvas>
+
+    <div id="noCam">
+      <div class="icon">📷</div>
+      <p>Point your camera at a Torah scroll column to identify the passage and navigate</p>
+      <button id="btnStartCam" onclick="startCam()">Open Camera</button>
+    </div>
+
+    <div id="camOverlay">
+      <div style="position:absolute;inset:0;pointer-events:none">
+        <div class="br tl"></div><div class="br tr"></div>
+        <div class="br bl"></div><div class="br br2"></div>
+      </div>
+      <div id="scanBadge"><div class="pdot"></div>Reading Hebrew…</div>
+      <div id="navResult"></div>
+      <div class="scan-bar">
+        <button id="btnScan" onclick="scanNow()">🔍 Scan Now</button>
+        <button id="btnAuto" onclick="toggleAuto()">▶ Auto</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── SETTINGS SCREEN ── -->
+<div id="settingsScreen" class="screen">
+  <div class="s-header">
+    <button class="btn-back" onclick="showScreen('appScreen')">‹</button>
+    <h2>Settings</h2>
+  </div>
+  <div class="s-body">
+    <div class="s-card">
+      <h3>API Key</h3>
+      <div class="key-disp" id="keyDisp">(none)</div>
+      <button class="btn-danger" onclick="clearKey()">🗑 Remove API Key</button>
+    </div>
+    <div class="s-card">
+      <h3>Auto-scan interval</h3>
+      <div class="ivl-row">
+        <label>Scan every</label>
+        <select id="ivlSel" onchange="setInterval_()">
+          <option value="4000">4 seconds</option>
+          <option value="6000" selected>6 seconds</option>
+          <option value="10000">10 seconds</option>
+          <option value="15000">15 seconds</option>
+        </select>
+      </div>
+    </div>
+    <div class="s-card howto">
+      <h3>How to use</h3>
+      <ol>
+        <li>Select target book, chapter &amp; verse above</li>
+        <li>Tap <b>Open Camera</b> and allow access</li>
+        <li>Hold phone over a Torah scroll column</li>
+        <li>Tap <b>Scan Now</b> or enable <b>Auto</b></li>
+        <li>Follow the arrow, roll, repeat</li>
+      </ol>
+      <div class="scroll-note"><b>Direction note:</b> "Roll Right →" means unroll toward the right etz chayyim (forward in reading order). "← Roll Left" means you've passed it.</div>
+    </div>
+    <div class="s-card">
+      <h3>Add to Home Screen</h3>
+      <p>In Safari, tap the Share button (□↑) then <b>"Add to Home Screen"</b> for a full-screen app with direct camera access.</p>
+    </div>
+    <div class="s-card">
+      <h3>About</h3>
+      <p>Uses Claude Vision AI to read Hebrew script. Each scan costs ~$0.002–0.005. Your API key never leaves this device.</p>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── Torah data ──
+const TORAH = {
+  "Bereshit":  { en:"Genesis",      ch:[31,25,24,26,32,22,24,22,29,32,32,20,18,24,21,16,27,33,38,18,34,24,20,67,34,35,46,22,35,43,55,32,20,31,29,43,36,30,23,23,57,38,34,34,28,34,31,22,33,26] },
+  "Shemot":    { en:"Exodus",       ch:[22,25,22,11,25,11,13,10,11,21,22,25,15,25,20,29,22,18,19,12,20,18,16,16,13,15,14,17,15,19,20,24,17,25,16,23,14,15,14] },
+  "Vayikra":   { en:"Leviticus",    ch:[17,16,17,35,19,30,38,36,24,20,47,8,59,57,33,34,16,30,24,33,3,17,15,6,11,15,51,22,11,20,34,31,15,23,20,40,25,25,16,6] },
+  "Bamidbar":  { en:"Numbers",      ch:[54,34,51,49,31,27,26,36,40,21,33,31,13,40,58,15,14,27,26,20,38,31,52,55,46,36,59,48,25,32,35,34,31,28,28,25,18,22,33,26,24,22,23,28,36,21,50,43,45,50,27,54,35,27,24,19,46,23,46,58,38] },
+  "Devarim":   { en:"Deuteronomy",  ch:[46,37,29,49,33,25,26,20,29,22,32,32,18,29,23,22,20,22,21,20,23,30,25,22,19,19,26,68,29,20,30,52,29,12,18,16,16,17,19,14,14,27] },
+};
+const BOOKS = Object.keys(TORAH);
+
+function tvib(b){ return TORAH[b].ch.reduce((s,v)=>s+v,0); }
+function voff(book,ch,v){ let o=0; for(let c=0;c<ch-1;c++) o+=TORAH[book].ch[c]; return o+v; }
+function absV(book,ch,v){ let a=0; for(const b of BOOKS){ if(b===book) break; a+=tvib(b); } return a+voff(book,ch,v); }
+
+function navGuide(tB,tC,tV,cB,cC,cV){
+  const diff = absV(tB,tC,tV) - absV(cB,cC,cV);
+  if(Math.abs(diff)<=2) return {dir:"here"};
+  const total = BOOKS.reduce((s,b)=>s+tvib(b),0);
+  const pct = Math.round(Math.abs(diff)/total*1000)/10;
+  const a = Math.abs(diff);
+  const dist = a<10?"just a few verses":a<30?"about half a column":a<100?"a few columns":a<300?"several panels":a<800?"quite a bit":"a significant distance";
+  return { dir: diff>0?"forward":"backward", lbl: diff>0?"Roll RIGHT →":"← Roll LEFT", dist, pct };
+}
+
+// ── Screens ──
+function showScreen(id){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  if(id==='settingsScreen'){
+    const k=getKey();
+    document.getElementById('keyDisp').textContent = k ? k.slice(0,12)+'••••••••••••'+k.slice(-4) : '(none)';
+  }
+}
+
+// ── API key ──
+const KS = 'torah_nav_key';
+const getKey = ()=>localStorage.getItem(KS);
+
+function saveKey(){
+  const v = document.getElementById('apiKeyInput').value.trim();
+  const err = document.getElementById('keyErr');
+  if(!v.startsWith('sk-ant-')){ err.style.display='block'; return; }
+  err.style.display='none';
+  localStorage.setItem(KS, v);
+  showScreen('appScreen');
+}
+
+function clearKey(){
+  if(confirm("Remove your API key? You'll need to re-enter it to use the app.")){
+    localStorage.removeItem(KS);
+    stopAuto(); stopCam();
+    document.getElementById('apiKeyInput').value='';
+    showScreen('keyScreen');
+  }
+}
+
+function toggleVis(){
+  const i=document.getElementById('apiKeyInput');
+  i.type = i.type==='password'?'text':'password';
+}
+
+// ── Selectors ──
+function buildBooks(){
+  const s=document.getElementById('selBook');
+  BOOKS.forEach(b=>{ const o=document.createElement('option'); o.value=b; o.textContent=`${b} (${TORAH[b].en})`; s.appendChild(o); });
+  buildChs();
+}
+function buildChs(){
+  const b=document.getElementById('selBook').value, s=document.getElementById('selCh');
+  s.innerHTML='';
+  TORAH[b].ch.forEach((_,i)=>{ const o=document.createElement('option'); o.value=i+1; o.textContent=i+1; s.appendChild(o); });
+  buildVs();
+}
+function buildVs(){
+  const b=document.getElementById('selBook').value, c=+document.getElementById('selCh').value;
+  const cnt=TORAH[b].ch[c-1], s=document.getElementById('selV');
+  s.innerHTML='';
+  for(let v=1;v<=cnt;v++){ const o=document.createElement('option'); o.value=v; o.textContent=v; s.appendChild(o); }
+  updDisp();
+}
+function onBook(){ buildChs(); }
+function onCh(){ buildVs(); }
+function onV(){ updDisp(); }
+function updDisp(){
+  const b=document.getElementById('selBook').value, c=document.getElementById('selCh').value, v=document.getElementById('selV').value;
+  document.getElementById('tRef').textContent=`${b} ${c}:${v}`;
+  document.getElementById('tRefEn').textContent=`${TORAH[b].en} ${c}:${v}`;
+}
+
+// ── Camera ──
+let camStream=null;
+async function startCam(){
+  try {
+    camStream = await navigator.mediaDevices.getUserMedia({ video:{facingMode:{ideal:'environment'},width:{ideal:1280},height:{ideal:720}}, audio:false });
+    document.getElementById('video').srcObject = camStream;
+    document.getElementById('noCam').style.display='none';
+  } catch(e) {
+    alert('Camera access denied. Please allow camera access in your browser/device settings, then reload the page.');
+  }
+}
+function stopCam(){ if(camStream){ camStream.getTracks().forEach(t=>t.stop()); camStream=null; } }
+
+function capture(){
+  const v=document.getElementById('video'), c=document.getElementById('snapCanvas');
+  const MAX=900, sc=Math.min(1,MAX/Math.max(v.videoWidth||640,v.videoHeight||480));
+  c.width=Math.round((v.videoWidth||640)*sc); c.height=Math.round((v.videoHeight||480)*sc);
+  c.getContext('2d').drawImage(v,0,0,c.width,c.height);
+  return c.toDataURL('image/jpeg',0.82).split(',')[1];
+}
+
+// ── Scan ──
+let busy=false, autoTmr=null, ivl=6000;
+
+function setInterval_(){ ivl=+document.getElementById('ivlSel').value; if(autoTmr){stopAuto();toggleAuto();} }
+
+function toggleAuto(){
+  const b=document.getElementById('btnAuto');
+  if(autoTmr){ stopAuto(); }
+  else { b.textContent='⏸ Auto'; b.classList.add('on'); autoTmr=setInterval(scanNow,ivl); scanNow(); }
+}
+function stopAuto(){ clearInterval(autoTmr); autoTmr=null; const b=document.getElementById('btnAuto'); b.textContent='▶ Auto'; b.classList.remove('on'); }
+
+async function scanNow(){
+  if(busy || !camStream) return;
+  const key=getKey(); if(!key){ alert('No API key — add one in Settings.'); return; }
+  busy=true;
+  document.getElementById('scanBadge').classList.add('on');
+  document.getElementById('btnScan').disabled=true;
+
+  try {
+    const img=capture();
+    const res=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','anthropic-version':'2023-06-01','x-api-key':key},
+      body:JSON.stringify({
+        model:'claude-sonnet-4-20250514', max_tokens:400,
+        messages:[{role:'user',content:[
+          {type:'image',source:{type:'base64',media_type:'image/jpeg',data:img}},
+          {type:'text',text:`You are a Torah scroll expert. Identify the Hebrew text in this image.
+Respond ONLY with JSON, no other text:
+{"found":true,"book":"Bereshit","chapter":1,"verse":1,"endChapter":1,"endVerse":6,"confidence":"high","notes":"one sentence"}
+- found: true if Torah text visible, false otherwise
+- book: Bereshit / Shemot / Vayikra / Bamidbar / Devarim
+- chapter/verse: FIRST visible verse; endChapter/endVerse: LAST visible
+- confidence: high/medium/low
+- notes: one short sentence`}
+        ]}]
+      })
+    });
+    if(!res.ok){ const e=await res.json().catch(()=>({})); throw new Error(e.error?.message||`HTTP ${res.status}`); }
+    const data=await res.json();
+    const raw=data.content?.find(b=>b.type==='text')?.text||'';
+    const m=raw.match(/\{[\s\S]*\}/); if(!m) throw new Error('No JSON in response');
+    renderResult(JSON.parse(m[0]));
+  } catch(e){ renderErr(e.message); }
+  finally {
+    busy=false;
+    document.getElementById('scanBadge').classList.remove('on');
+    document.getElementById('btnScan').disabled=false;
+  }
+}
+
+function renderResult(r){
+  const tB=document.getElementById('selBook').value, tC=+document.getElementById('selCh').value, tV=+document.getElementById('selV').value;
+  const el=document.getElementById('navResult'); el.innerHTML='';
+  if(!r.found){ el.innerHTML='<div class="no-txt">No Torah text detected — adjust view</div>'; el.classList.add('on'); return; }
+
+  const endRef=(r.endVerse&&r.endVerse!==r.verse)?`–${r.endChapter!==r.chapter?r.endChapter+':':''}${r.endVerse}`:'';
+  const cc=r.confidence==='high'?'ch':r.confidence==='medium'?'cm':'cl';
+  el.innerHTML=`<div class="loc-box"><div class="loc-lbl">Currently visible</div><div class="loc-ref">${r.book} ${r.chapter}:${r.verse}${endRef}</div><div class="loc-conf ${cc}">${r.confidence} confidence</div></div>`;
+  if(r.notes) el.innerHTML+=`<div class="loc-note">💬 ${r.notes}</div>`;
+
+  const nav=navGuide(tB,tC,tV,r.book,r.chapter,r.verse);
+  if(nav.dir==='here'){
+    el.innerHTML+=`<div class="at-tgt">✓ You're at the right place!</div>`;
+  } else {
+    el.innerHTML+=`<div class="dir-box"><div class="darr">${nav.dir==='forward'?'▶':'◀'}</div><div><div class="dlbl">${nav.lbl}</div><div class="ddst">${nav.dist}</div><div class="dpct">≈ ${nav.pct}% of the full scroll</div></div></div>`;
+  }
+  el.classList.add('on');
+}
+
+function renderErr(msg){ const el=document.getElementById('navResult'); el.innerHTML=`<div class="no-txt">⚠️ ${msg}</div>`; el.classList.add('on'); }
+
+// ── Init ──
+buildBooks();
+document.getElementById('apiKeyInput').addEventListener('keydown',e=>{ if(e.key==='Enter') saveKey(); });
+if(getKey()) showScreen('appScreen'); else showScreen('keyScreen');
+</script>
+</body>
+</html>
