@@ -247,11 +247,21 @@ function absV(book,ch,v){ let a=0; for(const b of BOOKS){ if(b===book) break; a+
 function navGuide(tB,tC,tV,cB,cC,cV){
   const diff = absV(tB,tC,tV) - absV(cB,cC,cV);
   if(Math.abs(diff)<=2) return {dir:"here"};
-  const total = BOOKS.reduce((s,b)=>s+tvib(b),0);
-  const pct = Math.round(Math.abs(diff)/total*1000)/10;
+  const VERSES_PER_COL = 24; // ~245 columns across ~5845 verses
+  const cols = Math.abs(diff) / VERSES_PER_COL;
   const a = Math.abs(diff);
-  const dist = a<10?"just a few verses":a<30?"about half a column":a<100?"a few columns":a<300?"several panels":a<800?"quite a bit":"a significant distance";
-  return { dir: diff>0?"forward":"backward", lbl: diff>0?"Roll RIGHT →":"← Roll LEFT", dist, pct };
+  let colStr;
+  if(a <= 3)       colStr = "less than a quarter column";
+  else if(cols < 0.5) colStr = "about a quarter column";
+  else if(cols < 1)   colStr = "about half a column";
+  else if(cols < 1.5) colStr = "about 1 column";
+  else if(cols < 2.5) colStr = "about 2 columns";
+  else if(cols < 4)   colStr = `about ${Math.round(cols)} columns`;
+  else if(cols < 10)  colStr = `about ${Math.round(cols)} columns`;
+  else if(cols < 20)  colStr = `about ${Math.round(cols)} columns`;
+  else                colStr = `about ${Math.round(cols)} columns`;
+  const colNum = Math.round(cols * 10) / 10;
+  return { dir: diff>0?"forward":"backward", lbl: diff>0?"Roll RIGHT →":"← Roll LEFT", colStr, colNum };
 }
 
 // ── Screens ──
@@ -368,14 +378,26 @@ async function scanNow(){
         model:'claude-sonnet-4-5-20250929', max_tokens:400,
         messages:[{role:'user',content:[
           {type:'image',source:{type:'base64',media_type:'image/jpeg',data:img}},
-          {type:'text',text:`You are a Torah scroll expert. Identify the Hebrew text in this image.
+          {type:'text',text:`You are an expert in Torah scrolls and Biblical Hebrew. Carefully examine the Hebrew text visible in this image and identify the exact passage.
+
+IMPORTANT: Read the Hebrew text character by character. Do NOT guess based on layout or context — actually read the words. Common mistakes to avoid:
+- Shemot (Exodus) and Bereshit (Genesis) can look similar — read the actual words carefully
+- Look for distinctive phrases: names, place names, and key words that anchor the passage
+- If you see מצרים (Mitzrayim/Egypt), פרעה (Pharaoh), or יציאת מצרים themes → likely Shemot
+- If you see בראשית ברא (In the beginning) → Bereshit chapter 1
+- Cross-check: does the content match the book you identified?
+
 Respond ONLY with JSON, no other text:
-{"found":true,"book":"Bereshit","chapter":1,"verse":1,"endChapter":1,"endVerse":6,"confidence":"high","notes":"one sentence"}
-- found: true if Torah text visible, false otherwise
+{"found":true,"book":"Bereshit","chapter":1,"verse":1,"endChapter":1,"endVerse":6,"confidence":"high","sample":"first 4-5 Hebrew words you can read","notes":"one sentence"}
+
+Fields:
+- found: true if Torah text is clearly visible, false otherwise
 - book: Bereshit / Shemot / Vayikra / Bamidbar / Devarim
-- chapter/verse: FIRST visible verse; endChapter/endVerse: LAST visible
-- confidence: high/medium/low
-- notes: one short sentence`}
+- chapter/verse: FIRST clearly visible verse (integers)
+- endChapter/endVerse: LAST clearly visible verse (integers)
+- confidence: high (certain of book+chapter) / medium (book certain, chapter approximate) / low (book uncertain)
+- sample: copy 4-5 Hebrew words you can actually read from the text — this is your verification
+- notes: one sentence describing what passage/events this text contains`}
         ]}]
       })
     });
@@ -400,13 +422,14 @@ function renderResult(r){
   const endRef=(r.endVerse&&r.endVerse!==r.verse)?`–${r.endChapter!==r.chapter?r.endChapter+':':''}${r.endVerse}`:'';
   const cc=r.confidence==='high'?'ch':r.confidence==='medium'?'cm':'cl';
   el.innerHTML=`<div class="loc-box"><div class="loc-lbl">Currently visible</div><div class="loc-ref">${r.book} ${r.chapter}:${r.verse}${endRef}</div><div class="loc-conf ${cc}">${r.confidence} confidence</div></div>`;
+  if(r.sample) el.innerHTML+=`<div class="loc-note">📖 ${r.sample}</div>`;
   if(r.notes) el.innerHTML+=`<div class="loc-note">💬 ${r.notes}</div>`;
 
   const nav=navGuide(tB,tC,tV,r.book,r.chapter,r.verse);
   if(nav.dir==='here'){
     el.innerHTML+=`<div class="at-tgt">✓ You're at the right place!</div>`;
   } else {
-    el.innerHTML+=`<div class="dir-box"><div class="darr">${nav.dir==='forward'?'▶':'◀'}</div><div><div class="dlbl">${nav.lbl}</div><div class="ddst">${nav.dist}</div><div class="dpct">≈ ${nav.pct}% of the full scroll</div></div></div>`;
+    el.innerHTML+=`<div class="dir-box"><div class="darr">${nav.dir==='forward'?'▶':'◀'}</div><div><div class="dlbl">${nav.lbl}</div><div class="ddst">${nav.colStr}</div><div class="dpct">(≈ ${nav.colNum} columns)</div></div></div>`;
   }
   el.classList.add('on');
 }
