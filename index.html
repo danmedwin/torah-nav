@@ -344,7 +344,7 @@ function stopCam(){ if(camStream){ camStream.getTracks().forEach(t=>t.stop()); c
 
 function capture(){
   const v=document.getElementById('video'), c=document.getElementById('snapCanvas');
-  const MAX=900, sc=Math.min(1,MAX/Math.max(v.videoWidth||640,v.videoHeight||480));
+  const MAX=1400, sc=Math.min(1,MAX/Math.max(v.videoWidth||640,v.videoHeight||480));
   c.width=Math.round((v.videoWidth||640)*sc); c.height=Math.round((v.videoHeight||480)*sc);
   c.getContext('2d').drawImage(v,0,0,c.width,c.height);
   return c.toDataURL('image/jpeg',0.82).split(',')[1];
