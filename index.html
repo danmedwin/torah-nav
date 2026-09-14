@@ -89,12 +89,15 @@ select { background:#0d0600; color:var(--parch); border:1px solid rgba(184,134,1
 .pdot { width:8px; height:8px; border-radius:50%; background:var(--gold-l); animation:pulse 1s ease-in-out infinite; }
 @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.3;transform:scale(.6)} }
 
-#navResult { display:flex; flex-direction:column; gap:6px; opacity:0; transition:opacity .3s; }
+#navResult { display:flex; flex-direction:column; gap:6px; opacity:0; transition:opacity .3s; max-height:calc(100% - 70px); overflow-y:auto; }
 #navResult.on { opacity:1; }
 .loc-box { background:rgba(0,0,0,.82); backdrop-filter:blur(6px); border:1px solid rgba(184,134,11,.4); border-radius:10px; padding:8px 12px; }
 .loc-lbl { font-size:9px; color:var(--parch-d); text-transform:uppercase; letter-spacing:1px; }
 .loc-ref { font-size:20px; font-weight:bold; color:var(--parch); margin:2px 0; }
 .loc-conf { font-size:10px; text-transform:uppercase; letter-spacing:1px; }
+.loc-top { display:flex; align-items:flex-start; justify-content:space-between; gap:10px; }
+.sef-link { flex-shrink:0; font-size:12px; color:var(--gold-l); border:1px solid rgba(184,134,11,.5); border-radius:14px; padding:5px 10px; text-decoration:none; pointer-events:all; white-space:nowrap; }
+.loc-he { direction:rtl; text-align:right; font-size:17px; line-height:1.7; color:var(--parch); margin-top:8px; padding-top:8px; border-top:1px solid rgba(184,134,11,.25); font-family:'SBL Hebrew','Ezra SIL','Times New Roman',serif; }
 .ch { color:#86efac; } .cm { color:#fde68a; } .cl { color:#fca5a5; }
 .dir-box { background:rgba(0,0,0,.88); backdrop-filter:blur(6px); border:2px solid var(--gold-l); border-radius:10px; padding:10px 14px; display:flex; align-items:center; gap:12px; }
 .darr { font-size:42px; color:var(--gold-l); line-height:1; flex-shrink:0; }
@@ -191,7 +194,7 @@ select { background:#0d0600; color:var(--parch); border:1px solid rgba(184,134,1
         <div class="br tl"></div><div class="br tr"></div>
         <div class="br bl"></div><div class="br br2"></div>
       </div>
-      <div id="scanBadge"><div class="pdot"></div>Reading Hebrew…</div>
+      <div id="scanBadge"><div class="pdot"></div>Reading &amp; transcribing…</div>
       <div id="navResult"></div>
       <div class="scan-bar">
         <button id="btnScan" onclick="scanNow()">🔍 Scan Now</button>
@@ -268,6 +271,19 @@ const BOOKS = Object.keys(TORAH);
 function tvib(b){ return TORAH[b].ch.reduce((s,v)=>s+v,0); }
 function voff(book,ch,v){ let o=0; for(let c=0;c<ch-1;c++) o+=TORAH[book].ch[c]; return o+v; }
 function absV(book,ch,v){ let a=0; for(const b of BOOKS){ if(b===book) break; a+=tvib(b); } return a+voff(book,ch,v); }
+
+function normBook(b){
+  if(!b) return null;
+  const k=String(b).toLowerCase().replace(/[^a-z]/g,'');
+  for(const name of BOOKS){ if(name.toLowerCase()===k || TORAH[name].en.toLowerCase()===k) return name; }
+  return null;
+}
+function sefariaUrl(book,ch,v,endCh,endV){
+  const en=TORAH[book].en;
+  let ref=`${en}.${ch}.${v}`;
+  if(endV && (endV!==v || (endCh&&endCh!==ch))) ref += (endCh&&endCh!==ch) ? `-${endCh}.${endV}` : `-${endV}`;
+  return `https://www.sefaria.org/${ref}?lang=bi`;
+}
 
 function navGuide(tB,tC,tV,cB,cC,cV){
   const diff = absV(tB,tC,tV) - absV(cB,cC,cV);
@@ -420,29 +436,29 @@ async function scanNow(){
       method:'POST',
       headers:Object.assign({'Content-Type':'application/json','anthropic-version':'2023-06-01','x-api-key':key,'anthropic-dangerous-direct-browser-access':'true'}, getWs()?{'anthropic-workspace-id':getWs()}:{}),
       body:JSON.stringify({
-        model:'claude-opus-4-8', max_tokens:400,
+        model:'claude-opus-4-8', max_tokens:8000,
+        thinking:{type:'adaptive'},
+        output_config:{effort:'medium'},
         messages:[{role:'user',content:[
           {type:'image',source:{type:'base64',media_type:'image/jpeg',data:img}},
-          {type:'text',text:`You are an expert in Torah scrolls and Biblical Hebrew. Carefully examine the Hebrew text visible in this image and identify the exact passage.
+          {type:'text',text:`This is a photograph of a Sefer Torah: a handwritten Torah scroll in traditional STA"M script, with no vowels, punctuation, or verse numbers.
 
-IMPORTANT: Read the Hebrew text character by character. Do NOT guess based on layout or context — actually read the words. Common mistakes to avoid:
-- Shemot (Exodus) and Bereshit (Genesis) can look similar — read the actual words carefully
-- Look for distinctive phrases: names, place names, and key words that anchor the passage
-- If you see מצרים (Mitzrayim/Egypt), פרעה (Pharaoh), or יציאת מצרים themes → likely Shemot
-- If you see בראשית ברא (In the beginning) → Bereshit chapter 1
-- Cross-check: does the content match the book you identified?
+Work in two steps.
+
+Step 1 — Transcribe. Read the Hebrew text letter by letter and transcribe the first 4 to 6 complete lines you can see clearly, starting from the top of the clearest column. Write exactly what is on the parchment, word by word, in reading order. Do not fill in words from memory; if a word is unclear, write it as best you can see it.
+
+Step 2 — Identify. Using only your transcription, determine which passage of the Torah this is. Then check that the surrounding lines are consistent with that identification. If the transcription does not clearly match a single passage, lower your confidence rather than guessing.
 
 Respond ONLY with JSON, no other text:
-{"found":true,"book":"Bereshit","chapter":1,"verse":1,"endChapter":1,"endVerse":6,"confidence":"high","sample":"first 4-5 Hebrew words you can read","notes":"one sentence"}
+{"found":true,"book":"Bereshit","chapter":1,"verse":1,"endChapter":1,"endVerse":6,"confidence":"high","transcription":"..."}
 
 Fields:
-- found: true if Torah text is clearly visible, false otherwise
-- book: Bereshit / Shemot / Vayikra / Bamidbar / Devarim
-- chapter/verse: FIRST clearly visible verse (integers)
-- endChapter/endVerse: LAST clearly visible verse (integers)
-- confidence: high (certain of book+chapter) / medium (book certain, chapter approximate) / low (book uncertain)
-- sample: copy 4-5 Hebrew words you can actually read from the text — this is your verification
-- notes: one sentence describing what passage/events this text contains`}
+- found: true if legible Torah text is visible, false otherwise
+- book: exactly one of Bereshit, Shemot, Vayikra, Bamidbar, Devarim
+- chapter, verse: the first verse that appears in your transcribed lines (integers)
+- endChapter, endVerse: the last verse that appears in your transcribed lines (integers)
+- confidence: high (certain of book, chapter, and verse), medium (certain of book, chapter approximate), low (book uncertain)
+- transcription: your Step 1 transcription, lines separated by " / "`}
         ]}]
       })
     });
@@ -463,12 +479,19 @@ function renderResult(r){
   const tB=document.getElementById('selBook').value, tC=+document.getElementById('selCh').value, tV=+document.getElementById('selV').value;
   const el=document.getElementById('navResult'); el.innerHTML='';
   if(!r.found){ el.innerHTML='<div class="no-txt">No Torah text detected — adjust view</div>'; el.classList.add('on'); return; }
+  const book=normBook(r.book);
+  if(!book){ renderErr(`Unrecognized book "${r.book}"`); return; }
+  r.book=book; r.chapter=+r.chapter||1; r.verse=+r.verse||1;
+  r.endChapter=+r.endChapter||r.chapter; r.endVerse=+r.endVerse||r.verse;
 
-  const endRef=(r.endVerse&&r.endVerse!==r.verse)?`–${r.endChapter!==r.chapter?r.endChapter+':':''}${r.endVerse}`:'';
+  const endRef=(r.endVerse!==r.verse||r.endChapter!==r.chapter)?`–${r.endChapter!==r.chapter?r.endChapter+':':''}${r.endVerse}`:'';
   const cc=r.confidence==='high'?'ch':r.confidence==='medium'?'cm':'cl';
-  el.innerHTML=`<div class="loc-box"><div class="loc-lbl">Currently visible</div><div class="loc-ref">${r.book} ${r.chapter}:${r.verse}${endRef}</div><div class="loc-conf ${cc}">${r.confidence} confidence</div></div>`;
-  if(r.sample) el.innerHTML+=`<div class="loc-note">📖 ${r.sample}</div>`;
-  if(r.notes) el.innerHTML+=`<div class="loc-note">💬 ${r.notes}</div>`;
+  const url=sefariaUrl(r.book,r.chapter,r.verse,r.endChapter,r.endVerse);
+  el.innerHTML=`<div class="loc-box">
+    <div class="loc-top"><div><div class="loc-lbl">Currently visible</div><div class="loc-ref">${r.book} ${r.chapter}:${r.verse}${endRef}</div><div class="loc-conf ${cc}">${r.confidence} confidence</div></div>
+    <a class="sef-link" href="${url}" target="_blank" rel="noopener">Sefaria ↗</a></div>
+    ${r.transcription?`<div class="loc-he">${String(r.transcription).replace(/</g,'&lt;').replace(/\s*\/\s*/g,'<br>')}</div>`:''}
+  </div>`;
 
   if(!targetSet()){
     el.innerHTML+=`<div class="pick-tgt">📍 Choose a target book, chapter &amp; verse above to get rolling directions</div>`;
