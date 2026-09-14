@@ -312,9 +312,10 @@ function locateText(transcription){
     let m=c; for(const d of [-2,-1,1,2]) if(votes.has(o+d)) m+=votes.get(o+d)*0.5;
     if(m>bestC){ second=bestC; bestC=m; best=o; } else if(m>second) second=m;
   }
+  let aligned=0; for(const [o,c] of votes) if(Math.abs(o-best)<=2) aligned+=c;
   const clamp=i=>Math.max(0,Math.min(i,TX.words.length-1));
   return { start:TX.loc[clamp(best)], end:TX.loc[clamp(best+t.length-1)],
-           score:Math.min(1,(votes.get(best)||0)/n), ambiguous: second>0 && second/bestC>0.6 };
+           score:Math.min(1,aligned/n), ambiguous: second>0 && second/bestC>0.6 };
 }
 
 function navGuide(tB,tC,tV,cB,cC,cV){
