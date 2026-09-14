@@ -95,6 +95,7 @@ select { background:#0d0600; color:var(--parch); border:1px solid rgba(184,134,1
 .loc-lbl { font-size:9px; color:var(--parch-d); text-transform:uppercase; letter-spacing:1px; }
 .loc-ref { font-size:20px; font-weight:bold; color:var(--parch); margin:2px 0; }
 .loc-conf { font-size:10px; text-transform:uppercase; letter-spacing:1px; }
+.loc-model { font-size:10px; color:rgba(232,213,168,.55); margin-top:2px; font-style:italic; }
 .loc-top { display:flex; align-items:flex-start; justify-content:space-between; gap:10px; }
 .sef-link { flex-shrink:0; font-size:12px; color:var(--gold-l); border:1px solid rgba(184,134,11,.5); border-radius:14px; padding:5px 10px; text-decoration:none; pointer-events:all; white-space:nowrap; }
 .loc-he { direction:rtl; text-align:right; font-size:17px; line-height:1.7; color:var(--parch); margin-top:8px; padding-top:8px; border-top:1px solid rgba(184,134,11,.25); font-family:'SBL Hebrew','Ezra SIL','Times New Roman',serif; }
@@ -257,6 +258,7 @@ select { background:#0d0600; color:var(--parch); border:1px solid rgba(184,134,1
   </div>
 </div>
 
+<script src="torah_text.js"></script>
 <script>
 // ── Torah data ──
 const TORAH = {
@@ -283,6 +285,36 @@ function sefariaUrl(book,ch,v,endCh,endV){
   let ref=`${en}.${ch}.${v}`;
   if(endV && (endV!==v || (endCh&&endCh!==ch))) ref += (endCh&&endCh!==ch) ? `-${endCh}.${endV}` : `-${endV}`;
   return `https://www.sefaria.org/${ref}?lang=bi`;
+}
+
+// ── Local Torah text index: locate a transcription without trusting the model's verse memory ──
+const TX = (()=>{
+  const words=[], loc=[];
+  if(typeof TORAH_TEXT==='undefined') return null;
+  for(const b of BOOKS){ TORAH_TEXT[b].forEach((chap,ci)=>chap.forEach((verse,vi)=>{ for(const w of verse.split(' ')) if(w){ words.push(w); loc.push([b,ci+1,vi+1]); } })); }
+  const tri=new Map(), bi=new Map();
+  const add=(m,k,i)=>{ const a=m.get(k); if(a) a.push(i); else m.set(k,[i]); };
+  for(let i=0;i<words.length-2;i++) add(tri, words[i]+' '+words[i+1]+' '+words[i+2], i);
+  for(let i=0;i<words.length-1;i++) add(bi, words[i]+' '+words[i+1], i);
+  return {words,loc,tri,bi};
+})();
+function cleanHe(s){ return String(s).normalize('NFD').replace(/[\u0591-\u05C7]/g,'').replace(/[^\u05D0-\u05EA\s]/g,' ').split(/\s+/).filter(Boolean); }
+function locateText(transcription){
+  if(!TX) return null;
+  const t=cleanHe(transcription); if(t.length<3) return null;
+  const votes=new Map(); let n=t.length-2;
+  const vote=(hits,i)=>{ for(const p of hits){ const o=p-i; votes.set(o,(votes.get(o)||0)+1); } };
+  for(let i=0;i<t.length-2;i++) vote(TX.tri.get(t[i]+' '+t[i+1]+' '+t[i+2])||[], i);
+  if(!votes.size){ n=t.length-1; for(let i=0;i<t.length-1;i++) vote(TX.bi.get(t[i]+' '+t[i+1])||[], i); }
+  if(!votes.size) return null;
+  let best=null,bestC=-1,second=0;
+  for(const [o,c] of votes){
+    let m=c; for(const d of [-2,-1,1,2]) if(votes.has(o+d)) m+=votes.get(o+d)*0.5;
+    if(m>bestC){ second=bestC; bestC=m; best=o; } else if(m>second) second=m;
+  }
+  const clamp=i=>Math.max(0,Math.min(i,TX.words.length-1));
+  return { start:TX.loc[clamp(best)], end:TX.loc[clamp(best+t.length-1)],
+           score:Math.min(1,(votes.get(best)||0)/n), ambiguous: second>0 && second/bestC>0.6 };
 }
 
 function navGuide(tB,tC,tV,cB,cC,cV){
@@ -480,15 +512,25 @@ function renderResult(r){
   const el=document.getElementById('navResult'); el.innerHTML='';
   if(!r.found){ el.innerHTML='<div class="no-txt">No Torah text detected — adjust view</div>'; el.classList.add('on'); return; }
   const book=normBook(r.book);
-  if(!book){ renderErr(`Unrecognized book "${r.book}"`); return; }
-  r.book=book; r.chapter=+r.chapter||1; r.verse=+r.verse||1;
-  r.endChapter=+r.endChapter||r.chapter; r.endVerse=+r.endVerse||r.verse;
+  const claim = book ? `${book} ${+r.chapter||'?'}:${+r.verse||'?'}` : null;
+  // Prefer a match of the transcription against the bundled Torah text over the model's own verse estimate
+  const hit = r.transcription ? locateText(r.transcription) : null;
+  let confLbl, cc;
+  if(hit && hit.score>=0.3 && !hit.ambiguous){
+    [r.book,r.chapter,r.verse]=hit.start; [,r.endChapter,r.endVerse]=hit.end;
+    confLbl = `✓ verified against text (${Math.round(hit.score*100)}% match)`; cc = hit.score>=0.6?'ch':'cm';
+  } else {
+    if(!book){ renderErr(`Unrecognized book "${r.book}"`); return; }
+    r.book=book; r.chapter=+r.chapter||1; r.verse=+r.verse||1;
+    r.endChapter=+r.endChapter||r.chapter; r.endVerse=+r.endVerse||r.verse;
+    confLbl = `${r.confidence} confidence · not verified against text`; cc = r.confidence==='high'?'cm':'cl';
+  }
+  const modelNote = (hit && hit.score>=0.3 && !hit.ambiguous && claim && claim!==`${r.book} ${r.chapter}:${r.verse}`) ? `<div class="loc-model">model estimated ${claim}</div>` : '';
 
   const endRef=(r.endVerse!==r.verse||r.endChapter!==r.chapter)?`–${r.endChapter!==r.chapter?r.endChapter+':':''}${r.endVerse}`:'';
-  const cc=r.confidence==='high'?'ch':r.confidence==='medium'?'cm':'cl';
   const url=sefariaUrl(r.book,r.chapter,r.verse,r.endChapter,r.endVerse);
   el.innerHTML=`<div class="loc-box">
-    <div class="loc-top"><div><div class="loc-lbl">Currently visible</div><div class="loc-ref">${r.book} ${r.chapter}:${r.verse}${endRef}</div><div class="loc-conf ${cc}">${r.confidence} confidence</div></div>
+    <div class="loc-top"><div><div class="loc-lbl">Currently visible</div><div class="loc-ref">${r.book} ${r.chapter}:${r.verse}${endRef}</div><div class="loc-conf ${cc}">${confLbl}</div>${modelNote}</div>
     <a class="sef-link" href="${url}" target="_blank" rel="noopener">Sefaria ↗</a></div>
     ${r.transcription?`<div class="loc-he">${String(r.transcription).replace(/</g,'&lt;').replace(/\s*\/\s*/g,'<br>')}</div>`:''}
   </div>`;
