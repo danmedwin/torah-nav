@@ -315,7 +315,7 @@ function locateText(transcription){
   let aligned=0; for(const [o,c] of votes) if(Math.abs(o-best)<=2) aligned+=c;
   const clamp=i=>Math.max(0,Math.min(i,TX.words.length-1));
   return { start:TX.loc[clamp(best)], end:TX.loc[clamp(best+t.length-1)],
-           score:Math.min(1,aligned/n), ambiguous: second>0 && second/bestC>0.6 };
+           score:Math.min(1,aligned/n), ambiguous: second>0 && second/bestC>0.8 };
 }
 
 function navGuide(tB,tC,tV,cB,cC,cV){
@@ -427,7 +427,7 @@ function updDisp(){
 let camStream=null;
 async function startCam(){
   try {
-    camStream = await navigator.mediaDevices.getUserMedia({ video:{facingMode:{ideal:'environment'},width:{ideal:1280},height:{ideal:720}}, audio:false });
+    camStream = await navigator.mediaDevices.getUserMedia({ video:{facingMode:{ideal:'environment'},width:{ideal:3840},height:{ideal:2160}}, audio:false });
     document.getElementById('video').srcObject = camStream;
     document.getElementById('noCam').style.display='none';
   } catch(e) {
@@ -438,10 +438,10 @@ function stopCam(){ if(camStream){ camStream.getTracks().forEach(t=>t.stop()); c
 
 function capture(){
   const v=document.getElementById('video'), c=document.getElementById('snapCanvas');
-  const MAX=1400, sc=Math.min(1,MAX/Math.max(v.videoWidth||640,v.videoHeight||480));
+  const MAX=1568, sc=Math.min(1,MAX/Math.max(v.videoWidth||640,v.videoHeight||480)); // 1568px is the most the model uses
   c.width=Math.round((v.videoWidth||640)*sc); c.height=Math.round((v.videoHeight||480)*sc);
   c.getContext('2d').drawImage(v,0,0,c.width,c.height);
-  return c.toDataURL('image/jpeg',0.82).split(',')[1];
+  return c.toDataURL('image/jpeg',0.85).split(',')[1];
 }
 
 // ── Scan ──
