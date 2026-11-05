@@ -59,15 +59,30 @@ select:disabled { opacity:.4; }
 .app-header .en { font-size:9px; color:var(--parch-d); letter-spacing:2px; text-transform:uppercase; }
 .btn-gear { background:none; border:1px solid rgba(184,134,11,.3); border-radius:8px; color:var(--gold); font-size:18px; padding:6px 10px; cursor:pointer; }
 
-.target-bar { background:var(--bg-card); border-bottom:1px solid rgba(184,134,11,.2); padding:10px 12px; flex-shrink:0; }
+.target-bar { background:var(--bg-card); border-bottom:1px solid rgba(184,134,11,.2); flex-shrink:0; }
 .selectors { display:flex; gap:6px; margin-bottom:8px; }
+.parsha-row { display:flex; gap:6px; margin-bottom:8px; }
+.sg.wide { flex:2; }
 .sg { display:flex; flex-direction:column; flex:1; min-width:0; }
 .sl { font-size:9px; color:var(--parch-d); margin-bottom:3px; text-transform:uppercase; letter-spacing:1px; }
 select { background:#0d0600; color:var(--parch); border:1px solid rgba(184,134,11,.5); border-radius:6px; padding:5px 3px; font-size:12px; font-family:Georgia,serif; outline:none; width:100%; }
-.tdisp { display:flex; align-items:baseline; gap:8px; }
+.tdisp { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+#btnWeek { margin-left:auto; background:transparent; color:var(--gold-l); border:1px solid var(--gold); border-radius:14px; padding:5px 11px; font-size:11px; font-family:Georgia,serif; cursor:pointer; white-space:nowrap; }
+#btnWeek:active { background:rgba(184,134,11,.25); }
+#btnWeek:disabled { opacity:.7; }
 #tRef { font-size:17px; font-weight:bold; color:var(--gold-l); }
-#tRefEn { font-size:11px; color:var(--parch-d); }
 
+/* Collapsible Target section */
+.target-head { width:100%; display:flex; align-items:center; gap:10px; background:none; border:none; color:inherit; font-family:Georgia,serif; padding:11px 12px; cursor:pointer; text-align:left; min-height:44px; }
+.target-head .tlabel { font-size:11px; font-weight:bold; letter-spacing:2px; text-transform:uppercase; color:var(--gold-l); flex-shrink:0; }
+#tSummary { flex:1; min-width:0; font-size:13px; font-weight:bold; color:var(--gold-l); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; opacity:0; visibility:hidden; transition:opacity .2s; }
+.target-bar.collapsed #tSummary { opacity:1; visibility:visible; }
+.chev { margin-left:auto; color:var(--gold); font-size:12px; transition:transform .25s; flex-shrink:0; }
+.target-bar.collapsed .chev { transform:rotate(-90deg); }
+.target-body { display:grid; grid-template-rows:1fr; transition:grid-template-rows .25s ease; }
+.target-bar.collapsed .target-body { grid-template-rows:0fr; }
+.target-inner { overflow:hidden; min-height:0; }
+.target-pad { padding:0 12px 10px; }
 .vf-wrap { flex:1; position:relative; overflow:hidden; background:#000; }
 #video { width:100%; height:100%; object-fit:cover; display:block; }
 #snapCanvas { display:none; }
@@ -171,13 +186,22 @@ select { background:#0d0600; color:var(--parch); border:1px solid rgba(184,134,1
     <button class="btn-gear" onclick="showScreen('settingsScreen')">⚙️</button>
   </div>
 
-  <div class="target-bar">
+  <div class="target-bar" id="targetBar">
+    <button class="target-head" id="targetHead" onclick="toggleTarget()" aria-expanded="true" aria-controls="targetBody">
+      <span class="tlabel">Target</span><span id="tSummary"></span><span class="chev">▾</span>
+    </button>
+    <div class="target-body" id="targetBody"><div class="target-inner"><div class="target-pad">
+    <div class="parsha-row">
+      <div class="sg wide"><div class="sl">Parsha</div><select id="selParsha" onchange="onParsha()"></select></div>
+      <div class="sg"><div class="sl">Aliyah</div><select id="selAliyah" onchange="onAliyah()"></select></div>
+    </div>
     <div class="selectors">
       <div class="sg"><div class="sl">Book</div><select id="selBook" onchange="onBook()"></select></div>
       <div class="sg"><div class="sl">Chapter</div><select id="selCh" onchange="onCh()"></select></div>
       <div class="sg"><div class="sl">Verse</div><select id="selV" onchange="onV()"></select></div>
     </div>
-    <div class="tdisp"><span id="tRef"></span><span id="tRefEn"></span></div>
+    <div class="tdisp"><span id="tRef"></span><button id="btnWeek" onclick="thisWeek()">📅 This week</button></div>
+    </div></div></div>
   </div>
 
   <div class="vf-wrap">
@@ -198,7 +222,7 @@ select { background:#0d0600; color:var(--parch); border:1px solid rgba(184,134,1
       <div id="scanBadge"><div class="pdot"></div>Reading &amp; transcribing…</div>
       <div id="navResult"></div>
       <div class="scan-bar">
-        <button id="btnScan" onclick="scanNow()">🔍 Scan Now</button>
+        <button id="btnScan" onclick="tapScan()">🔍 Scan Now</button>
         <button id="btnAuto" onclick="toggleAuto()">▶ Auto</button>
       </div>
     </div>
@@ -239,7 +263,7 @@ select { background:#0d0600; color:var(--parch); border:1px solid rgba(184,134,1
     <div class="s-card howto">
       <h3>How to use</h3>
       <ol>
-        <li>Select target book, chapter &amp; verse above</li>
+        <li>Under <b>Target</b>, pick a parsha and aliyah (or tap <b>This week</b>), or choose a book, chapter &amp; verse</li>
         <li>Tap <b>Open Camera</b> and allow access</li>
         <li>Hold phone over a Torah scroll column</li>
         <li>Tap <b>Scan Now</b> or enable <b>Auto</b></li>
@@ -269,6 +293,65 @@ const TORAH = {
   "Devarim":  { en:"Deuteronomy", ch:[46,37,29,49,30,25,26,20,29,22,32,31,19,29,23,22,20,22,21,20,23,29,26,22,19,19,26,69,28,20,30,52,29,12] },
 };
 const BOOKS = Object.keys(TORAH);
+
+// Aliyah start verses for all 54 portions (c:v, seven per portion). Source: Sefaria.
+const PARSHIYOT = [
+  ['Bereshit','Bereshit','1:1 2:4 2:20 3:22 4:19 4:23 5:25'],
+  ['Noach','Bereshit','6:9 7:1 7:17 8:15 9:8 9:18 11:1'],
+  ['Lech Lecha','Bereshit','12:1 12:14 13:5 14:1 14:21 15:7 17:7'],
+  ['Vayera','Bereshit','18:1 18:15 19:1 19:21 21:5 21:22 22:1'],
+  ['Chayei Sara','Bereshit','23:1 23:17 24:10 24:27 24:53 25:1 25:12'],
+  ['Toldot','Bereshit','25:19 26:6 26:13 26:23 26:30 27:28 28:5'],
+  ['Vayetzei','Bereshit','28:10 29:1 29:18 30:14 30:28 31:17 31:43'],
+  ['Vayishlach','Bereshit','32:4 32:14 32:31 33:6 34:1 35:12 36:20'],
+  ['Vayeshev','Bereshit','37:1 37:12 37:23 38:1 39:1 39:7 40:1'],
+  ['Miketz','Bereshit','41:1 41:15 41:39 41:53 42:19 43:16 43:30'],
+  ['Vayigash','Bereshit','44:18 44:31 45:8 45:19 45:28 46:28 47:11'],
+  ['Vayechi','Bereshit','47:28 48:10 48:17 49:1 49:19 49:27 50:21'],
+  ['Shemot','Shemot','1:1 1:18 2:11 3:1 3:16 4:18 5:1'],
+  ['Vaera','Shemot','6:2 6:14 6:29 7:8 8:7 8:19 9:17'],
+  ['Bo','Shemot','10:1 10:12 10:24 11:4 12:21 12:29 13:1'],
+  ['Beshalach','Shemot','13:17 14:9 14:15 14:26 15:27 16:11 17:1'],
+  ['Yitro','Shemot','18:1 18:13 18:24 19:1 19:7 19:20 20:15'],
+  ['Mishpatim','Shemot','21:1 21:20 22:4 22:27 23:6 23:20 23:26'],
+  ['Terumah','Shemot','25:1 25:17 25:31 26:15 26:31 27:1 27:9'],
+  ['Tetzaveh','Shemot','27:20 28:13 28:31 29:1 29:19 29:38 30:1'],
+  ['Ki Tisa','Shemot','30:11 31:18 33:12 33:17 34:1 34:10 34:27'],
+  ['Vayakhel','Shemot','35:1 35:21 35:30 36:8 36:20 37:17 38:1'],
+  ['Pekudei','Shemot','38:21 39:2 39:22 39:33 40:1 40:17 40:28'],
+  ['Vayikra','Vayikra','1:1 1:14 2:7 3:1 4:1 4:27 5:11'],
+  ['Tzav','Vayikra','6:1 6:12 7:11 8:1 8:14 8:22 8:30'],
+  ['Shmini','Vayikra','9:1 9:17 9:24 10:12 10:16 11:1 11:33'],
+  ['Tazria','Vayikra','12:1 13:6 13:18 13:24 13:29 13:40 13:55'],
+  ['Metzora','Vayikra','14:1 14:13 14:21 14:33 14:54 15:16 15:29'],
+  ['Achrei Mot','Vayikra','16:1 16:18 16:25 17:1 17:8 18:6 18:22'],
+  ['Kedoshim','Vayikra','19:1 19:15 19:23 19:33 20:1 20:8 20:23'],
+  ['Emor','Vayikra','21:1 21:16 22:17 23:1 23:23 23:33 24:1'],
+  ['Behar','Vayikra','25:1 25:14 25:19 25:25 25:29 25:39 25:47'],
+  ['Bechukotai','Vayikra','26:3 26:6 26:10 27:1 27:16 27:22 27:29'],
+  ['Bamidbar','Bamidbar','1:1 1:20 2:1 3:1 3:14 3:40 4:1'],
+  ['Nasso','Bamidbar','4:21 4:38 5:1 5:11 7:1 7:42 7:72'],
+  ['Beha\'alotcha','Bamidbar','8:1 8:15 9:1 9:15 10:11 10:35 11:30'],
+  ['Sh\'lach','Bamidbar','13:1 13:21 14:8 14:26 15:8 15:17 15:27'],
+  ['Korach','Bamidbar','16:1 16:14 16:20 17:9 17:16 17:25 18:21'],
+  ['Chukat','Bamidbar','19:1 19:18 20:7 20:14 20:22 21:10 21:21'],
+  ['Balak','Bamidbar','22:2 22:13 22:21 22:39 23:13 23:27 24:14'],
+  ['Pinchas','Bamidbar','25:10 26:5 26:52 27:6 28:1 28:16 29:12'],
+  ['Matot','Bamidbar','30:2 31:1 31:13 31:25 31:42 32:1 32:20'],
+  ['Masei','Bamidbar','33:1 33:11 33:50 34:16 35:1 35:9 36:1'],
+  ['Devarim','Devarim','1:1 1:11 1:22 1:39 2:2 2:31 3:15'],
+  ['Vaetchanan','Devarim','3:23 4:5 4:41 5:1 5:19 6:4 7:1'],
+  ['Eikev','Devarim','7:12 8:11 9:4 10:1 10:12 11:10 11:22'],
+  ['Re\'eh','Devarim','11:26 12:11 12:29 14:1 14:22 15:1 15:19'],
+  ['Shoftim','Devarim','16:18 17:14 18:1 18:6 18:14 19:14 20:10'],
+  ['Ki Teitzei','Devarim','21:10 21:22 22:8 23:8 23:25 24:5 24:14'],
+  ['Ki Tavo','Devarim','26:1 26:12 26:16 27:1 27:11 28:7 29:1'],
+  ['Nitzavim','Devarim','29:9 29:12 29:15 30:1 30:7 30:11 30:15'],
+  ['Vayeilech','Devarim','31:1 31:4 31:7 31:10 31:14 31:20 31:25'],
+  ['Ha\'Azinu','Devarim','32:1 32:7 32:13 32:19 32:29 32:40 32:44'],
+  ['V\'Zot HaBerachah','Devarim','33:1 33:8 33:13 33:18 33:22 33:27 34:1'],
+];
+const PARSHA = PARSHIYOT.map(([n,b,s])=>({n,b,a:s.split(' ').map(x=>x.split(':').map(Number))}));
 
 function tvib(b){ return TORAH[b].ch.reduce((s,v)=>s+v,0); }
 function voff(book,ch,v){ let o=0; for(let c=0;c<ch-1;c++) o+=TORAH[book].ch[c]; return o+v; }
@@ -411,16 +494,167 @@ function buildVs(){
   for(let v=1;v<=cnt;v++){ const o=document.createElement('option'); o.value=v; o.textContent=v; s.appendChild(o); }
   updDisp();
 }
-function onBook(){ buildChs(); }
-function onCh(){ buildVs(); }
-function onV(){ updDisp(); }
+function onBook(){ buildChs(); manual(); }
+function onCh(){ buildVs(); manual(); }
+function onV(){ updDisp(); manual(); }
 function updDisp(){
   const b=document.getElementById('selBook').value, c=document.getElementById('selCh').value, v=document.getElementById('selV').value;
-  const ref=document.getElementById('tRef'), en=document.getElementById('tRefEn');
-  if(!b){ ref.textContent='No target yet — choose a verse above'; ref.classList.add('unset'); en.textContent=''; return; }
+  const ref=document.getElementById('tRef');
+  if(!b){ ref.textContent='No target yet — choose a parsha or verse'; ref.classList.add('unset'); return; }
   ref.classList.remove('unset');
   ref.textContent=`${b} ${c}:${v}`;
-  en.textContent=`${TORAH[b].en} ${c}:${v}`;
+}
+
+
+// ── Parsha / aliyah target ──
+const $ = id => document.getElementById(id);
+const TS = 'torah_scroller_target';
+
+function buildParshiyot(){
+  const s=$('selParsha');
+  s.innerHTML='<option value="">Choose…</option>';
+  BOOKS.forEach(b=>{
+    const g=document.createElement('optgroup'); g.label=`${b} (${TORAH[b].en})`;
+    PARSHA.forEach((p,i)=>{ if(p.b===b){ const o=document.createElement('option'); o.value=i; o.textContent=p.n; g.appendChild(o); } });
+    s.appendChild(g);
+  });
+}
+
+function setParshaUI(pi,al){
+  const sel=$('selParsha');
+  sel.options[0].textContent = (pi<0 && targetSet()) ? 'Custom verse' : 'Choose…';
+  sel.value = pi>=0 ? String(pi) : '';
+  const s=$('selAliyah'); s.innerHTML='';
+  if(pi<0){
+    const o=document.createElement('option'); o.value=''; o.textContent='—'; s.appendChild(o);
+    s.disabled=true; return;
+  }
+  for(let i=1;i<=7;i++){ const o=document.createElement('option'); o.value=i; o.textContent=i; s.appendChild(o); }
+  s.disabled=false; s.value=String(al||1);
+}
+
+function setTarget(book,ch,v,pi,al){
+  $('selBook').value=book; buildChs();
+  $('selCh').value=ch; buildVs();
+  $('selV').value=v; updDisp();
+  setParshaUI(pi,al); saveTarget(); refresh();
+}
+
+function onParsha(){
+  const val=$('selParsha').value;
+  if(val===''){ manual(); return; }
+  const pi=+val, st=PARSHA[pi].a[0];
+  setTarget(PARSHA[pi].b, st[0], st[1], pi, 1);
+}
+
+function onAliyah(){
+  const pi=+$('selParsha').value, al=+$('selAliyah').value;
+  if($('selParsha').value==='' || !al) return;
+  const st=PARSHA[pi].a[al-1];
+  setTarget(PARSHA[pi].b, st[0], st[1], pi, al);
+}
+
+// Book, chapter or verse changed by hand: the target is no longer tied to a parsha
+function manual(){ setParshaUI(-1); saveTarget(); refresh(); }
+
+function saveTarget(){
+  try{
+    if(!targetSet()){ localStorage.removeItem(TS); return; }
+    const pv=$('selParsha').value, av=$('selAliyah').value;
+    localStorage.setItem(TS, JSON.stringify({ b:$('selBook').value, c:+$('selCh').value, v:+$('selV').value, p:pv===''?-1:+pv, a:av===''?0:+av }));
+  }catch(e){}
+}
+
+function loadTarget(){
+  let t=null;
+  try{ t=JSON.parse(localStorage.getItem(TS)); }catch(e){}
+  const ok = t && TORAH[t.b] && t.c>=1 && t.c<=TORAH[t.b].ch.length && t.v>=1 && t.v<=TORAH[t.b].ch[t.c-1]
+    && Number.isInteger(t.p) && t.p>=-1 && t.p<PARSHA.length && (t.p<0 || (t.a>=1 && t.a<=7));
+  if(ok) setTarget(t.b,t.c,t.v,t.p,t.a);
+  else { setParshaUI(-1); refresh(); }          // no saved target: start unset, as before
+}
+
+// Re-draw the last scan against the new target so the arrow updates without a rescan
+// (renderResult rewrites the object it is given, so hand it a copy)
+function refresh(){ updSummary(); if(lastResult) renderResult(JSON.parse(JSON.stringify(lastResult))); }
+
+// ── This week's parsha ──
+// Primary source: Sefaria calendar. Backup: Hebcal. Both are diaspora (Israel differs on a few weeks).
+const BOOK_BY_EN = { Genesis:'Bereshit', Exodus:'Shemot', Leviticus:'Vayikra', Numbers:'Bamidbar', Deuteronomy:'Devarim' };
+const norm = s => s.toLowerCase().replace(/[^a-z]/g,'');
+
+function parshaByName(str){
+  const disp = norm(str).replace(/^parashat/,'');
+  let best=-1, len=0;
+  PARSHA.forEach((p,i)=>{ const n=norm(p.n); if(disp.startsWith(n) && n.length>len){ best=i; len=n.length; } });
+  return best;
+}
+
+function parshaByRef(ref){
+  const m=(ref||'').match(/^([A-Za-z]+) (\d+):(\d+)/);
+  if(!m || !BOOK_BY_EN[m[1]]) return -1;
+  const b=BOOK_BY_EN[m[1]], c=+m[2], v=+m[3];
+  return PARSHA.findIndex(p=>p.b===b && p.a[0][0]===c && p.a[0][1]===v);
+}
+
+async function weekFromSefaria(){
+  const tz=(Intl.DateTimeFormat().resolvedOptions().timeZone)||'America/New_York';
+  const res=await fetch(`https://www.sefaria.org/api/calendars?diaspora=1&timezone=${encodeURIComponent(tz)}`);
+  if(!res.ok) throw new Error('HTTP '+res.status);
+  const data=await res.json();
+  const item=(data.calendar_items||[]).find(i=>i.title && i.title.en==='Parashat Hashavua');
+  if(!item) return -1;
+  const byRef=parshaByRef(item.ref);
+  return byRef>=0 ? byRef : parshaByName((item.displayValue&&item.displayValue.en)||'');
+}
+
+async function weekFromHebcal(){
+  const ymd=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  const a=new Date(), b=new Date(a.getTime()+7*86400000);
+  const res=await fetch(`https://www.hebcal.com/hebcal?v=1&cfg=json&s=on&start=${ymd(a)}&end=${ymd(b)}`);
+  if(!res.ok) throw new Error('HTTP '+res.status);
+  const data=await res.json();
+  const item=(data.items||[]).find(i=>i.category==='parashat');
+  return item ? parshaByName(item.title||'') : -1;
+}
+
+async function thisWeek(){
+  const btn=$('btnWeek'), orig='📅 This week';
+  btn.disabled=true; btn.textContent='Loading…';
+  let pi=-1;
+  try{ pi=await weekFromSefaria(); }catch(e){}
+  if(pi<0){ try{ pi=await weekFromHebcal(); }catch(e){} }
+  if(pi>=0){
+    const st=PARSHA[pi].a[0];
+    setTarget(PARSHA[pi].b, st[0], st[1], pi, 1);
+    btn.textContent='✓ '+PARSHA[pi].n;
+  } else {
+    btn.textContent='⚠ Not available';
+  }
+  setTimeout(()=>{ btn.textContent=orig; btn.disabled=false; }, 2200);
+}
+
+// ── Collapsible Target section ──
+const CS = 'torah_scroller_target_collapsed';
+
+function setCollapsed(c, persist=true){
+  $('targetBar').classList.toggle('collapsed', c);
+  $('targetHead').setAttribute('aria-expanded', String(!c));
+  $('targetBar').querySelector('.target-inner').inert = c;   // keep hidden selects out of tab order / screen readers
+  if(persist){ try{ localStorage.setItem(CS, c?'1':'0'); }catch(e){} }
+}
+function toggleTarget(){ setCollapsed(!$('targetBar').classList.contains('collapsed')); }
+function collapseTarget(){ setCollapsed(true); }
+function loadCollapsed(){
+  let c=false;
+  try{ c = localStorage.getItem(CS)==='1'; }catch(e){}
+  setCollapsed(c, false);
+}
+// One-line summary shown while collapsed: "Chukat · Aliyah 3 · Bamidbar 20:7", or just the verse for a custom target
+function updSummary(){
+  if(!targetSet()){ $('tSummary').textContent='Not set'; return; }
+  const ref=`${$('selBook').value} ${$('selCh').value}:${$('selV').value}`, pv=$('selParsha').value;
+  $('tSummary').textContent = pv!=='' ? `${PARSHA[+pv].n} · Aliyah ${$('selAliyah').value} · ${ref}` : ref;
 }
 
 // ── Camera ──
@@ -445,15 +679,21 @@ function capture(){
 }
 
 // ── Scan ──
-let busy=false, autoTmr=null, ivl=6000;
+let busy=false, autoTmr=null, ivl=6000, lastResult=null;
 
-function setInterval_(){ ivl=+document.getElementById('ivlSel').value; if(autoTmr){stopAuto();toggleAuto();} }
+function setInterval_(){ ivl=+document.getElementById('ivlSel').value; if(autoTmr){stopAuto();startAuto();} }
 
-function toggleAuto(){
+function startAuto(){
   const b=document.getElementById('btnAuto');
-  if(autoTmr){ stopAuto(); }
-  else { b.textContent='⏸ Auto'; b.classList.add('on'); autoTmr=setInterval(scanNow,ivl); scanNow(); }
+  b.textContent='⏸ Auto'; b.classList.add('on'); autoTmr=setInterval(scanNow,ivl); scanNow();
 }
+// Starting a scan folds the Target section away (only when a target is set, so the prompt to choose one stays visible).
+// Timer ticks and interval changes never collapse it.
+function toggleAuto(){
+  if(autoTmr){ stopAuto(); }
+  else { if(camStream && targetSet()) collapseTarget(); startAuto(); }
+}
+function tapScan(){ if(!camStream) return; if(targetSet()) collapseTarget(); scanNow(); }
 function stopAuto(){ clearInterval(autoTmr); autoTmr=null; const b=document.getElementById('btnAuto'); b.textContent='▶ Auto'; b.classList.remove('on'); }
 
 async function scanNow(){
@@ -499,8 +739,8 @@ Fields:
     const data=await res.json();
     const raw=data.content?.find(b=>b.type==='text')?.text||'';
     const m=raw.match(/\{[\s\S]*\}/); if(!m) throw new Error('No JSON in response');
-    renderResult(JSON.parse(m[0]));
-  } catch(e){ renderErr(e.message); }
+    lastResult=JSON.parse(m[0]); renderResult(JSON.parse(JSON.stringify(lastResult)));
+  } catch(e){ lastResult=null; renderErr(e.message); }
   finally {
     busy=false;
     document.getElementById('scanBadge').classList.remove('on');
@@ -537,7 +777,7 @@ function renderResult(r){
   </div>`;
 
   if(!targetSet()){
-    el.innerHTML+=`<div class="pick-tgt">📍 Choose a target book, chapter &amp; verse above to get rolling directions</div>`;
+    el.innerHTML+=`<div class="pick-tgt">📍 Choose a target above (parsha or verse) to get rolling directions</div>`;
     el.classList.add('on'); return;
   }
   const nav=navGuide(tB,tC,tV,r.book,r.chapter,r.verse);
@@ -561,6 +801,9 @@ function renderErr(msg){
 
 // ── Init ──
 buildBooks();
+buildParshiyot();
+loadTarget();
+loadCollapsed();
 document.getElementById('apiKeyInput').addEventListener('keydown',e=>{ if(e.key==='Enter') saveKey(); });
 if(getKey()) showScreen('appScreen'); else showScreen('keyScreen');
 </script>
