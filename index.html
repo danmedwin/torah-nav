@@ -88,6 +88,22 @@ select { background:#0d0600; color:var(--parch); border:1px solid rgba(184,134,1
 .vf-wrap { flex:1; position:relative; overflow:hidden; background:#000; }
 #video { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; display:block; }
 #snapCanvas { display:none; }
+/* Frozen snapshot shown while a manual scan runs and while its result is on screen */
+#snapImg { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; display:none; }
+#snapImg.on { display:block; animation:snapIn .35s ease-out; }
+@keyframes snapIn { from { filter:brightness(2.2); } to { filter:brightness(1); } }
+/* Scanning sweep: a gold band that glides up and down over the image */
+#sweep { position:absolute; inset:0; pointer-events:none; overflow:hidden; opacity:0; transition:opacity .3s; background:rgba(0,0,0,.22); }
+#sweep.on { opacity:1; }
+#sweep .band { position:absolute; left:0; right:0; height:120px; top:-60px;
+  background:linear-gradient(to bottom, transparent, rgba(212,160,23,.10) 35%, rgba(240,200,80,.35) 48%, rgba(255,228,140,.95) 50%, rgba(240,200,80,.35) 52%, rgba(212,160,23,.10) 65%, transparent);
+  animation:sweepMove 2.4s cubic-bezier(.45,0,.55,1) infinite alternate; }
+#sweep.on .band { animation-play-state:running; }
+@keyframes sweepMove { from { top:-60px; } to { top:calc(100% - 60px); } }
+@media (prefers-reduced-motion: reduce) {
+  #sweep .band { animation:none; top:calc(50% - 60px); opacity:.6; }
+  #snapImg.on { animation:none; }
+}
 
 #noCam { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:14px; background:#0d0600; }
 #noCam .icon { font-size:52px; }
@@ -209,6 +225,8 @@ select { background:#0d0600; color:var(--parch); border:1px solid rgba(184,134,1
   <div class="vf-wrap">
     <video id="video" playsinline muted autoplay></video>
     <canvas id="snapCanvas"></canvas>
+    <img id="snapImg" alt="">
+    <div id="sweep"><div class="band"></div></div>
 
     <div id="noCam">
       <div class="icon">📷</div>
@@ -670,14 +688,14 @@ async function startCam(){
     alert('Camera access denied. Please allow camera access in your browser/device settings, then reload the page.');
   }
 }
-function stopCam(){ if(camStream){ camStream.getTracks().forEach(t=>t.stop()); camStream=null; } }
+function stopCam(){ goLive(); if(camStream){ camStream.getTracks().forEach(t=>t.stop()); camStream=null; } }
 
 function capture(){
   const v=document.getElementById('video'), c=document.getElementById('snapCanvas');
   const MAX=1568, sc=Math.min(1,MAX/Math.max(v.videoWidth||640,v.videoHeight||480)); // 1568px is the most the model uses
   c.width=Math.round((v.videoWidth||640)*sc); c.height=Math.round((v.videoHeight||480)*sc);
   c.getContext('2d').drawImage(v,0,0,c.width,c.height);
-  return c.toDataURL('image/jpeg',0.85).split(',')[1];
+  return c.toDataURL('image/jpeg',0.85);
 }
 
 // ── Scan ──
@@ -693,20 +711,42 @@ function startAuto(){
 // Timer ticks and interval changes never collapse it.
 function toggleAuto(){
   if(autoTmr){ stopAuto(); }
-  else { if(camStream && targetSet()) collapseTarget(); startAuto(); }
+  else { if(frozen){ goLive(); clearResult(); } if(camStream && targetSet()) collapseTarget(); startAuto(); }
 }
-function tapScan(){ if(!camStream) return; if(targetSet()) collapseTarget(); scanNow(); }
+// Manual scans freeze the captured photo on screen; the result stays over it until Rescan.
+// Auto mode stays on the live feed (freezing every few seconds would flicker).
+let frozen=false;
+function freeze(url){
+  const im=document.getElementById('snapImg'); im.src=url;
+  im.classList.remove('on'); void im.offsetWidth; im.classList.add('on');
+  frozen=true;
+}
+function goLive(){
+  frozen=false;
+  document.getElementById('snapImg').classList.remove('on');
+  document.getElementById('btnScan').textContent='🔍 Scan Now';
+}
+function clearResult(){ lastResult=null; const el=document.getElementById('navResult'); el.innerHTML=''; el.classList.remove('on'); }
+function tapScan(){
+  if(!camStream) return;
+  if(frozen){ goLive(); clearResult(); return; }   // Rescan: back to the live camera to reframe
+  if(targetSet()) collapseTarget();
+  scanNow(true);
+}
 function stopAuto(){ clearInterval(autoTmr); autoTmr=null; const b=document.getElementById('btnAuto'); b.textContent='▶ Auto'; b.classList.remove('on'); }
 
-async function scanNow(){
+async function scanNow(manual){
+  manual = manual===true;   // setInterval passes a number, so only tapScan counts as manual
   if(busy || !camStream) return;
   const key=getKey(); if(!key){ alert('No API key — add one in Settings.'); return; }
   busy=true;
   document.getElementById('scanBadge').classList.add('on');
   document.getElementById('btnScan').disabled=true;
+  document.getElementById('sweep').classList.add('on');
 
   try {
-    const img=capture();
+    const url=capture(), img=url.split(',')[1];
+    if(manual) freeze(url);
     const res=await fetch('https://api.anthropic.com/v1/messages',{
       method:'POST',
       headers:Object.assign({'Content-Type':'application/json','anthropic-version':'2023-06-01','x-api-key':key,'anthropic-dangerous-direct-browser-access':'true'}, getWs()?{'anthropic-workspace-id':getWs()}:{}),
@@ -746,7 +786,10 @@ Fields:
   finally {
     busy=false;
     document.getElementById('scanBadge').classList.remove('on');
+    document.getElementById('sweep').classList.remove('on');
     document.getElementById('btnScan').disabled=false;
+    // A good read stays frozen with its result; nothing legible or an error goes back to live to reframe
+    if(frozen){ if(lastResult && lastResult.found) document.getElementById('btnScan').textContent='📷 Rescan'; else goLive(); }
   }
 }
 
