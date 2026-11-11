@@ -88,6 +88,21 @@ select { background:#0d0600; color:var(--parch); border:1px solid rgba(184,134,1
 .vf-wrap { flex:1; position:relative; overflow:hidden; background:#000; }
 #video { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; display:block; }
 #snapCanvas { display:none; }
+/* Line icons: gold outlines, round ends, no fill */
+svg.i { width:1.15em; height:1.15em; vertical-align:-0.2em; fill:none; stroke:currentColor; stroke-width:1.6; stroke-linecap:round; stroke-linejoin:round; flex-shrink:0; }
+.btn-ic { display:inline-flex; align-items:center; justify-content:center; gap:.4em; }
+#btnScan, #btnAuto, #btnWeek, .btn-danger, .btn-gold { display:inline-flex; align-items:center; justify-content:center; gap:.45em; }
+#btnAuto svg.i { width:1em; height:1em; }
+.key-scroll svg { width:84px; height:63px; fill:none; stroke:var(--gold); stroke-width:1.4; stroke-linecap:round; stroke-linejoin:round; }
+#noCam .icon svg.i { width:52px; height:52px; stroke-width:1.2; color:var(--gold); }
+.btn-gear svg.i { width:20px; height:20px; display:block; }
+#toggleVis svg.i { width:20px; height:20px; display:block; }
+.darr svg { width:48px; height:24px; display:block; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
+.sef-link svg.i { width:.95em; height:.95em; margin-left:.2em; }
+.loc-conf svg.i, .at-tgt svg.i, .no-txt svg.i, .pick-tgt svg.i, .ws-saved svg.i { width:1.05em; height:1.05em; margin-right:.3em; }
+/* Hebrew transcription: font sized to fill the box, each line justified like a scroll column */
+.loc-he .hl { display:block; white-space:nowrap; text-align:justify; text-align-last:justify; }
+.loc-he .hl.short { text-align-last:right; }
 /* Frozen snapshot shown while a manual scan runs and while its result is on screen */
 #snapImg { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; display:none; }
 #snapImg.on { display:block; animation:snapIn .35s ease-out; }
@@ -168,6 +183,27 @@ select { background:#0d0600; color:var(--parch); border:1px solid rgba(184,134,1
 </style>
 </head>
 <body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="i-gear" viewBox="0 0 24 24"><path d="M18.31 10.05 L21.07 10.44 L21.07 13.56 L18.31 13.95 L17.84 15.08 L19.51 17.31 L17.31 19.51 L15.08 17.84 L13.95 18.31 L13.56 21.07 L10.44 21.07 L10.05 18.31 L8.92 17.84 L6.69 19.51 L4.49 17.31 L6.16 15.08 L5.69 13.95 L2.93 13.56 L2.93 10.44 L5.69 10.05 L6.16 8.92 L4.49 6.69 L6.69 4.49 L8.92 6.16 L10.05 5.69 L10.44 2.93 L13.56 2.93 L13.95 5.69 L15.08 6.16 L17.31 4.49 L19.51 6.69 L17.84 8.92 Z"/><circle cx="12" cy="12" r="3"/></symbol>
+    <symbol id="i-cam" viewBox="0 0 24 24"><path d="M3.5 8.5a2 2 0 0 1 2-2h2.2l1.6-2.2h5.4l1.6 2.2h2.2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2z"/><circle cx="12" cy="13" r="3.6"/></symbol>
+    <symbol id="i-search" viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6"/><path d="M15 15l5 5"/></symbol>
+    <symbol id="i-cal" viewBox="0 0 24 24"><rect x="4" y="5.5" width="16" height="14.5" rx="2"/><path d="M4 10h16M8.5 3.5v4M15.5 3.5v4"/></symbol>
+    <symbol id="i-eye" viewBox="0 0 24 24"><path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z"/><circle cx="12" cy="12" r="2.8"/></symbol>
+    <symbol id="i-trash" viewBox="0 0 24 24"><path d="M4.5 7h15M9.5 7V4.5h5V7M6.5 7l1 12.5h9l1-12.5M10.5 10.5v6M13.5 10.5v6"/></symbol>
+    <symbol id="i-pin" viewBox="0 0 24 24"><path d="M12 21s-6.5-6.2-6.5-11a6.5 6.5 0 0 1 13 0c0 4.8-6.5 11-6.5 11z"/><circle cx="12" cy="10" r="2.3"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></symbol>
+    <symbol id="i-alert" viewBox="0 0 24 24"><path d="M12 4l9 15.5H3z"/><path d="M12 10v4.5M12 17.2v.1"/></symbol>
+    <symbol id="i-ext" viewBox="0 0 24 24"><path d="M13.5 4.5h6v6M19.5 4.5l-8 8M17.5 13.5v5a1.5 1.5 0 0 1-1.5 1.5H6a1.5 1.5 0 0 1-1.5-1.5V8A1.5 1.5 0 0 1 6 6.5h5"/></symbol>
+    <symbol id="i-next" viewBox="0 0 24 24"><path d="M4.5 12h15M13.5 6l6 6-6 6"/></symbol>
+    <symbol id="i-play" viewBox="0 0 24 24"><path d="M8 5.5v13l10.5-6.5z"/></symbol>
+    <symbol id="i-pause" viewBox="0 0 24 24"><path d="M8.5 5.5v13M15.5 5.5v13"/></symbol>
+    <symbol id="i-share" viewBox="0 0 24 24"><path d="M8.5 9.5H6.5v10.5h11V9.5h-2M12 14V3.5M8.5 7L12 3.5 15.5 7"/></symbol>
+    <symbol id="i-arrow-l" viewBox="0 0 48 24"><path d="M44 12H5M14 3.5L5 12l9 8.5"/></symbol>
+    <symbol id="i-arrow-r" viewBox="0 0 48 24"><path d="M4 12h39M34 3.5L43 12l-9 8.5"/></symbol>
+    <symbol id="i-scroll" viewBox="0 0 64 48"><rect x="17" y="10" width="30" height="28"/><path d="M22 16h20M22 21h20M22 26h20M22 31h14"/><rect x="9" y="7" width="8" height="34" rx="4"/><rect x="47" y="7" width="8" height="34" rx="4"/><path d="M13 2.5V7M13 41v4.5M51 2.5V7M51 41v4.5"/></symbol>
+  </defs>
+</svg>
 
 <!-- ── API KEY SCREEN ── -->
 <div id="keyScreen" class="screen active">
@@ -175,14 +211,14 @@ select { background:#0d0600; color:var(--parch); border:1px solid rgba(184,134,1
     <div class="he">מגלת תורה</div>
     <div class="en">Torah Scroller</div>
   </div>
-  <div class="key-scroll">📜</div>
+  <div class="key-scroll"><svg viewBox="0 0 64 48"><use href="#i-scroll"/></svg></div>
   <div class="key-card">
     <h2>One-time setup</h2>
     <p>This app uses Claude AI to read Hebrew text from your live camera. You'll need an Anthropic API key — each scan costs a cent or two.</p>
     <p>Get yours free at <a href="https://console.anthropic.com" target="_blank">console.anthropic.com</a> → API Keys. Your key is stored only on this device.</p>
     <div class="key-input-wrap">
       <input type="password" id="apiKeyInput" placeholder="sk-ant-api03-…" autocomplete="off" autocorrect="off" spellcheck="false" />
-      <button id="toggleVis" onclick="toggleVis()">👁</button>
+      <button id="toggleVis" onclick="toggleVis()" aria-label="Show or hide key"><svg class="i"><use href="#i-eye"/></svg></button>
     </div>
     <div class="key-error" id="keyErr">Please enter a valid key (starts with sk-ant-)</div>
     <details class="ws-details">
@@ -190,7 +226,7 @@ select { background:#0d0600; color:var(--parch); border:1px solid rgba(184,134,1
       <input type="text" id="wsIdInput" class="ws-input" placeholder="wrkspc_…" autocomplete="off" autocorrect="off" spellcheck="false" />
       <p class="ws-help">Default (non-workspace) keys require this. Find it in the Console under Settings → Workspaces. Alternatively, create your key inside a workspace and leave this blank.</p>
     </details>
-    <button class="btn-gold" onclick="saveKey()">Save &amp; Open Camera →</button>
+    <button class="btn-gold" onclick="saveKey()"><span>Save &amp; Open Camera</span><svg class="i"><use href="#i-next"/></svg></button>
   </div>
 </div>
 
@@ -201,7 +237,7 @@ select { background:#0d0600; color:var(--parch); border:1px solid rgba(184,134,1
       <div class="he">מגלת תורה</div>
       <div class="en">Torah Scroller</div>
     </div>
-    <button class="btn-gear" onclick="showScreen('settingsScreen')">⚙️</button>
+    <button class="btn-gear" onclick="showScreen('settingsScreen')" aria-label="Settings"><svg class="i"><use href="#i-gear"/></svg></button>
   </div>
 
   <div class="target-bar" id="targetBar">
@@ -218,7 +254,7 @@ select { background:#0d0600; color:var(--parch); border:1px solid rgba(184,134,1
       <div class="sg"><div class="sl">Chapter</div><select id="selCh" onchange="onCh()"></select></div>
       <div class="sg"><div class="sl">Verse</div><select id="selV" onchange="onV()"></select></div>
     </div>
-    <div class="tdisp"><span id="tRef"></span><button id="btnWeek" onclick="thisWeek()">📅 This week</button></div>
+    <div class="tdisp"><span id="tRef"></span><button id="btnWeek" onclick="thisWeek()"><svg class="i"><use href="#i-cal"/></svg><span>This week</span></button></div>
     </div></div></div>
   </div>
 
@@ -229,7 +265,7 @@ select { background:#0d0600; color:var(--parch); border:1px solid rgba(184,134,1
     <div id="sweep"><div class="band"></div></div>
 
     <div id="noCam">
-      <div class="icon">📷</div>
+      <div class="icon"><svg class="i"><use href="#i-cam"/></svg></div>
       <p>Point your camera at a Torah scroll column to identify the passage and navigate</p>
       <button id="btnStartCam" onclick="startCam()">Open Camera</button>
     </div>
@@ -242,8 +278,8 @@ select { background:#0d0600; color:var(--parch); border:1px solid rgba(184,134,1
       <div id="scanBadge"><div class="pdot"></div>Reading &amp; transcribing…</div>
       <div id="navResult"></div>
       <div class="scan-bar">
-        <button id="btnScan" onclick="tapScan()">🔍 Scan Now</button>
-        <button id="btnAuto" onclick="toggleAuto()">▶ Auto</button>
+        <button id="btnScan" onclick="tapScan()"><svg class="i"><use href="#i-search"/></svg><span>Scan Now</span></button>
+        <button id="btnAuto" onclick="toggleAuto()"><svg class="i"><use href="#i-play"/></svg><span>Auto</span></button>
       </div>
     </div>
   </div>
@@ -259,14 +295,14 @@ select { background:#0d0600; color:var(--parch); border:1px solid rgba(184,134,1
     <div class="s-card">
       <h3>API Key</h3>
       <div class="key-disp" id="keyDisp">(none)</div>
-      <button class="btn-danger" onclick="clearKey()">🗑 Remove API Key</button>
+      <button class="btn-danger" onclick="clearKey()"><svg class="i"><use href="#i-trash"/></svg><span>Remove API Key</span></button>
     </div>
     <div class="s-card">
       <h3>Workspace ID</h3>
       <p>Needed only if your API key is a default key not scoped to a workspace. Console → Settings → Workspaces.</p>
       <input type="text" id="wsIdSettings" class="ws-input" placeholder="wrkspc_… (optional)" autocomplete="off" autocorrect="off" spellcheck="false" />
       <button class="btn-gold" style="padding:10px;font-size:14px" onclick="saveWs()">Save Workspace ID</button>
-      <div class="ws-saved" id="wsSaved">Saved ✓</div>
+      <div class="ws-saved" id="wsSaved"><svg class="i"><use href="#i-check"/></svg>Saved</div>
     </div>
     <div class="s-card">
       <h3>Auto-scan interval</h3>
@@ -289,11 +325,11 @@ select { background:#0d0600; color:var(--parch); border:1px solid rgba(184,134,1
         <li>Tap <b>Scan Now</b> or enable <b>Auto</b></li>
         <li>Follow the arrow, roll, repeat</li>
       </ol>
-      <div class="scroll-note"><b>Direction note:</b> "Roll Right →" means unroll toward the right etz chayyim (forward in reading order). "← Roll Left" means you've passed it.</div>
+      <div class="scroll-note"><b>Direction note:</b> "Target left" means the passage you want is further along, to the left of what you see. "Target right" means you've passed it and it's back to the right.</div>
     </div>
     <div class="s-card">
       <h3>Add to Home Screen</h3>
-      <p>In Safari, tap the Share button (□↑) then <b>"Add to Home Screen"</b> for a full-screen app with direct camera access.</p>
+      <p>In Safari, tap the Share button (<svg class="i"><use href="#i-share"/></svg>) then <b>"Add to Home Screen"</b> for a full-screen app with direct camera access.</p>
     </div>
     <div class="s-card">
       <h3>About</h3>
@@ -438,7 +474,7 @@ function navGuide(tB,tC,tV,cB,cC,cV){
   else if(cols < 20)  colStr = `about ${Math.round(cols)} columns`;
   else                colStr = `about ${Math.round(cols)} columns`;
   const colNum = Math.round(cols * 10) / 10;
-  return { dir: diff>0?"forward":"backward", lbl: diff>0?"Roll RIGHT →":"← Roll LEFT", colStr, colNum };
+  return { dir: diff>0?"forward":"backward", lbl: diff>0?"Target left":"Target right", colStr, colNum };
 }
 
 // ── Screens ──
@@ -486,6 +522,7 @@ function clearKey(){
   }
 }
 
+const ICON = n => `<svg class="i"><use href="#i-${n}"/></svg>`;
 function toggleVis(){
   const i=document.getElementById('apiKeyInput');
   i.type = i.type==='password'?'text':'password';
@@ -639,7 +676,7 @@ async function weekFromHebcal(){
 }
 
 async function thisWeek(){
-  const btn=$('btnWeek'), orig='📅 This week';
+  const btn=$('btnWeek'), orig=btn.innerHTML;
   btn.disabled=true; btn.textContent='Loading…';
   let pi=-1;
   try{ pi=await weekFromSefaria(); }catch(e){}
@@ -647,11 +684,11 @@ async function thisWeek(){
   if(pi>=0){
     const st=PARSHA[pi].a[0];
     setTarget(PARSHA[pi].b, st[0], st[1], pi, 1);
-    btn.textContent='✓ '+PARSHA[pi].n;
+    btn.innerHTML=ICON('check')+'<span>'+PARSHA[pi].n+'</span>';
   } else {
-    btn.textContent='⚠ Not available';
+    btn.innerHTML=ICON('alert')+'<span>Not available</span>';
   }
-  setTimeout(()=>{ btn.textContent=orig; btn.disabled=false; }, 2200);
+  setTimeout(()=>{ btn.innerHTML=orig; btn.disabled=false; }, 2200);
 }
 
 // ── Collapsible Target section ──
@@ -705,7 +742,7 @@ function setInterval_(){ ivl=+document.getElementById('ivlSel').value; if(autoTm
 
 function startAuto(){
   const b=document.getElementById('btnAuto');
-  b.textContent='⏸ Auto'; b.classList.add('on'); autoTmr=setInterval(scanNow,ivl); scanNow();
+  b.innerHTML=ICON('pause')+'<span>Auto</span>'; b.classList.add('on'); autoTmr=setInterval(scanNow,ivl); scanNow();
 }
 // Starting a scan folds the Target section away (only when a target is set, so the prompt to choose one stays visible).
 // Timer ticks and interval changes never collapse it.
@@ -724,7 +761,7 @@ function freeze(url){
 function goLive(){
   frozen=false;
   document.getElementById('snapImg').classList.remove('on');
-  document.getElementById('btnScan').textContent='🔍 Scan Now';
+  document.getElementById('btnScan').innerHTML=ICON('search')+'<span>Scan Now</span>';
 }
 function clearResult(){ lastResult=null; const el=document.getElementById('navResult'); el.innerHTML=''; el.classList.remove('on'); }
 function tapScan(){
@@ -733,7 +770,7 @@ function tapScan(){
   if(targetSet()) collapseTarget();
   scanNow(true);
 }
-function stopAuto(){ clearInterval(autoTmr); autoTmr=null; const b=document.getElementById('btnAuto'); b.textContent='▶ Auto'; b.classList.remove('on'); }
+function stopAuto(){ clearInterval(autoTmr); autoTmr=null; const b=document.getElementById('btnAuto'); b.innerHTML=ICON('play')+'<span>Auto</span>'; b.classList.remove('on'); }
 
 async function scanNow(manual){
   manual = manual===true;   // setInterval passes a number, so only tapScan counts as manual
@@ -789,7 +826,7 @@ Fields:
     document.getElementById('sweep').classList.remove('on');
     document.getElementById('btnScan').disabled=false;
     // A good read stays frozen with its result; nothing legible or an error goes back to live to reframe
-    if(frozen){ if(lastResult && lastResult.found) document.getElementById('btnScan').textContent='📷 Rescan'; else goLive(); }
+    if(frozen){ if(lastResult && lastResult.found) document.getElementById('btnScan').innerHTML=ICON('cam')+'<span>Rescan</span>'; else goLive(); }
   }
 }
 
@@ -804,7 +841,7 @@ function renderResult(r){
   let confLbl, cc;
   if(hit && hit.score>=0.3 && !hit.ambiguous){
     [r.book,r.chapter,r.verse]=hit.start; [,r.endChapter,r.endVerse]=hit.end;
-    confLbl = `✓ verified against text (${Math.round(hit.score*100)}% match)`; cc = hit.score>=0.6?'ch':'cm';
+    confLbl = ICON('check')+`verified against text (${Math.round(hit.score*100)}% match)`; cc = hit.score>=0.6?'ch':'cm';
   } else {
     if(!book){ renderErr(`Unrecognized book "${r.book}"`); return; }
     r.book=book; r.chapter=+r.chapter||1; r.verse=+r.verse||1;
@@ -817,26 +854,43 @@ function renderResult(r){
   const url=sefariaUrl(r.book,r.chapter,r.verse,r.endChapter,r.endVerse);
   el.innerHTML=`<div class="loc-box">
     <div class="loc-top"><div><div class="loc-lbl">Currently visible</div><div class="loc-ref">${r.book} ${r.chapter}:${r.verse}${endRef}</div><div class="loc-conf ${cc}">${confLbl}</div>${modelNote}</div>
-    <a class="sef-link" href="${url}" target="_blank" rel="noopener">Sefaria ↗</a></div>
-    ${r.transcription?`<div class="loc-he">${String(r.transcription).replace(/</g,'&lt;').replace(/\s*\/\s*/g,'<br>')}</div>`:''}
+    <a class="sef-link" href="${url}" target="_blank" rel="noopener">Sefaria<svg class="i"><use href="#i-ext"/></svg></a></div>
+    ${r.transcription?`<div class="loc-he">${String(r.transcription).replace(/</g,'&lt;').split(/\s*\/\s*/).filter(Boolean).map(l=>`<span class="hl">${l}</span>`).join('')}</div>`:''}
   </div>`;
 
   if(!targetSet()){
-    el.innerHTML+=`<div class="pick-tgt">📍 Choose a target above (parsha or verse) to get rolling directions</div>`;
+    el.innerHTML+=`<div class="pick-tgt">${ICON('pin')}Choose a target above (parsha or verse) to get rolling directions</div>`;
     el.classList.add('on'); return;
   }
   const nav=navGuide(tB,tC,tV,r.book,r.chapter,r.verse);
   if(nav.dir==='here'){
-    el.innerHTML+=`<div class="at-tgt">✓ You're at the right place!</div>`;
+    el.innerHTML+=`<div class="at-tgt">${ICON('check')}You're at the right place!</div>`;
   } else {
-    el.innerHTML+=`<div class="dir-box"><div class="darr">${nav.dir==='forward'?'▶':'◀'}</div><div><div class="dlbl">${nav.lbl}</div><div class="ddst">${nav.colStr}</div><div class="dpct">(≈ ${nav.colNum} columns)</div></div></div>`;
+    el.innerHTML+=`<div class="dir-box"><div class="darr"><svg viewBox="0 0 48 24"><use href="#i-arrow-${nav.dir==='forward'?'l':'r'}"/></svg></div><div><div class="dlbl">${nav.lbl}</div><div class="ddst">${nav.colStr}</div><div class="dpct">(≈ ${nav.colNum} columns)</div></div></div>`;
   }
   el.classList.add('on');
+  fitHebrew();
 }
+
+// Size the Hebrew so its longest line spans the box, then justify each line edge to edge.
+// Lines much shorter than the longest (paragraph ends) stay right-aligned, as a scribe would leave them.
+function fitHebrew(){
+  const he=document.querySelector('#navResult .loc-he'); if(!he) return;
+  const lines=[...he.querySelectorAll('.hl')]; if(!lines.length) return;
+  const BASE=20; he.style.fontSize=BASE+'px';
+  lines.forEach(l=>{ l.style.display='inline-block'; l.style.textAlignLast='auto'; });
+  const ws=lines.map(l=>l.getBoundingClientRect().width);
+  lines.forEach(l=>{ l.style.display=''; l.style.textAlignLast=''; });
+  const max=Math.max(...ws), W=he.clientWidth;
+  if(!max || !W) return;
+  he.style.fontSize=Math.max(14, Math.min(34, BASE*W/max*0.98))+'px';
+  lines.forEach((l,i)=>l.classList.toggle('short', ws[i] < max*0.7 || l.textContent.trim().split(/\s+/).length<2));
+}
+addEventListener('resize', ()=>fitHebrew());
 
 function renderErr(msg){
   const el=document.getElementById('navResult');
-  el.innerHTML=`<div class="no-txt">⚠️ ${msg}</div>`;
+  el.innerHTML=`<div class="no-txt">${ICON('alert')}${msg}</div>`;
   if(/workspace/i.test(msg)){
     stopAuto();
     el.innerHTML+=`<div class="ws-hint">Your key isn't scoped to a workspace. Add your Workspace ID in Settings, or create a key inside a workspace at console.anthropic.com.<br><button onclick="showScreen('settingsScreen')">Open Settings</button></div>`;
